@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  cs_server:
+    build: 
+      context: .
+    volumes:
+      - .:/cs_server
+    tty: true
+    stdin_open: true
+    command: ["sh"]

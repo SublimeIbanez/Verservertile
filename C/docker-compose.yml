@@ -5,19 +5,19 @@ services:
       context: .
     volumes:
       - .:/c_server
-    ports:
-      - "9000:8080"
+    # ports:
+    #   - "9000:8080"
     tty: true
     stdin_open: true
     command: ["sh"]
 
-  c_server1:
-      build: 
-        context: .
-      volumes:
-        - .:/c_server
-      ports:
-        - "9001:8080"
-      tty: true
-      stdin_open: true
-      command: ["sh"]
+  # c_server1:
+  #     build: 
+  #       context: .
+  #     volumes:
+  #       - .:/c_server
+  #     # ports:
+  #     #   - "9001:8080"
+  #     tty: true
+  #     stdin_open: true
+  #     command: ["sh"]
