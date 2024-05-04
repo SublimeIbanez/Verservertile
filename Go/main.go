@@ -27,7 +27,7 @@ func main() {
 	case utils.Client:
 		client.HandleClient(host)
 	case utils.Balancer:
-		balancer.Handlebalancer(host)
+		balancer.HandleBalancer(host)
 	}
 }
 
@@ -46,15 +46,17 @@ func ParseArgs() {
 	// Validate host
 	valid := true
 	if host == "" || !strings.Contains(host, ":") || strings.Count(host, ":") > 1 {
-		fmt.Printf("==ERROR: Invalid HOST\n  Passed: %s, expected IP address or Domain.\n", host)
+		fmt.Printf("==ERROR: Invalid HOST\n  Passed: %s, expected domain:port.\n", host)
 		valid = false
 	}
 
 	// Ensure prt is passed correctly
-	prt, err := strconv.Atoi(strings.Split(host, ":")[1])
-	if err != nil || prt < 2000 || prt > 32000 {
-		fmt.Printf("==ERROR: Invalid PORT\n  Provided: %s, expected value between 2000 and 32000\n", strings.Split(host, ":")[1])
-		valid = false
+	if strings.Count(host, ":") == 1 {
+		prt, err := strconv.Atoi(strings.Split(host, ":")[1])
+		if err != nil || prt < 2000 || prt > 32000 {
+			fmt.Printf("==ERROR: Invalid PORT\n  Provided: %s, expected value between 2000 and 32000\n", strings.Split(host, ":")[1])
+			valid = false
+		}
 	}
 
 	// Validate mode

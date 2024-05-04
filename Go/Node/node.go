@@ -10,21 +10,21 @@ import (
 	"strings"
 )
 
-type ServerNode struct {
+type Node struct {
 	host       string
 	port       uint16
 	leader     bool
-	nodeList   []ServerNode
+	nodeList   []Node
 	clientList []client.Client
 }
 
-func (node ServerNode) newNode(address string) ServerNode {
+func (node Node) newNode(address string) Node {
 	var prt, err = strconv.Atoi(strings.Split(address, ":")[1])
 	if err != nil {
 		fmt.Printf("How did you dun get past the initial parse??!!?! %s\n", err)
 	}
 
-	return ServerNode{
+	return Node{
 		host: strings.Split(address, ":")[0],
 		port: uint16(prt),
 	}
