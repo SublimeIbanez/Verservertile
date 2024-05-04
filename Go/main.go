@@ -2,12 +2,10 @@ package main
 
 import (
 	"fmt"
-	"go_server/balancer"
 	"go_server/client"
-	"go_server/node"
+	"go_server/server"
 	"go_server/utils"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/spf13/pflag"
@@ -16,18 +14,19 @@ import (
 var (
 	host string
 	mode = utils.Server
+	port uint16
 )
 
 func main() {
 	ParseArgs()
 
 	switch mode {
+	case utils.Balancer:
+		server.HandleBalancer(port)
 	case utils.Server:
-		node.HandleNode(host)
+		server.HandleNode(host, port)
 	case utils.Client:
 		client.HandleClient(host)
-	case utils.Balancer:
-		balancer.HandleBalancer(host)
 	}
 }
 
@@ -39,33 +38,30 @@ func ParseArgs() {
 		fmt.Fprintln(os.Stderr, "Options:")
 		pflag.PrintDefaults()
 	}
-	pflag.StringVarP(&host, "host", "h", "", "hostname:port (required)")
+	pflag.StringVarP(&host, "host", "h", "", "host")
+	pflag.Uint16VarP(&port, "port", "p", 8080, "port")
 	pflag.StringVarP(&modeArg, "mode", "m", "", "balancer|server|client (required)")
 	pflag.Parse()
 
-	// Validate host
-	valid := true
-	if host == "" || !strings.Contains(host, ":") || strings.Count(host, ":") > 1 {
-		fmt.Printf("==ERROR: Invalid HOST\n  Passed: %s, expected domain:port.\n", host)
-		valid = false
-	}
-
-	// Ensure prt is passed correctly
-	if strings.Count(host, ":") == 1 {
-		prt, err := strconv.Atoi(strings.Split(host, ":")[1])
-		if err != nil || prt < 2000 || prt > 32000 {
-			fmt.Printf("==ERROR: Invalid PORT\n  Provided: %s, expected value between 2000 and 32000\n", strings.Split(host, ":")[1])
-			valid = false
-		}
-	}
-
 	// Validate mode
+	valid := true
 	modeArg = strings.ToLower(modeArg)
-	if _, valid := utils.ValidModes[modeArg]; !valid {
+	if _, v := utils.ValidModes[modeArg]; !v {
 		fmt.Printf("==ERROR: Invalid MODE\n  Provided: %s, expected 'Balancer', 'Server', or 'Client'\n", modeArg)
 		valid = false
 	}
 	mode = utils.ValidModes[modeArg]
+
+	// Validate host
+	if mode != utils.Balancer && host == "" {
+		fmt.Print("==ERROR: Invalid HOST\n  Nothing was provided.\n")
+		valid = false
+	}
+	// Ensure prt is passed correctly
+	if port != 8080 && (port < 2000 || port > 32000) {
+		fmt.Printf("==ERROR: Invalid PORT\n  Provided: %d, expected value between 2000 and 32000\n", port)
+		valid = false
+	}
 
 	if !valid {
 		pflag.Usage()
