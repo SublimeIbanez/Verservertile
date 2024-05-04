@@ -7,13 +7,15 @@ type Directive string
 
 const (
 	Type    Property = `json:"type"`
-	Uuid    Property = "uuid"
-	Address Property = "address"
-	Nodes   Property = "nodes"
-	Leader  Property = "leader"
-	Ok      Property = "ok"
-	Message Property = "message"
+	Uuid    Property = `json:"uuid"`
+	Address Property = `json:"address"`
+	Nodes   Property = `json:"nodes"`
+	Leader  Property = `json:"leader"`
+	Ok      Property = `json:"ok"`
+	Message Property = `json:"message"`
 
+	Request  Directive = "request"
+	Response Directive = "response"
 	Register Directive = "register"
 )
 
