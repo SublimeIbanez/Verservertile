@@ -1,36 +1,23 @@
 package utils
 
-import "net"
-
-type Mode uint8
-type Protocol string
+type Entity uint8
+type ConnType string
 
 const (
-	Balancer Mode = 0
-	Server   Mode = 1
-	Client   Mode = 2
+	Leader Entity = 0
+	Node   Entity = 1
+	Client Entity = 2
 )
 
-var ValidModes = map[string]Mode{
-	"balancer": Balancer,
-	"server":   Server,
-	"client":   Client,
+var EntityTypes = map[string]Entity{
+	"leader": Leader,
+	"node":   Node,
+	"client": Client,
 }
 
 const (
-	TCP Protocol = "tcp"
-	UDP Protocol = "udp"
+	TCP ConnType = "tcp"
+	UDP ConnType = "udp"
 )
 
 const BUFFER_SIZE = 1024
-
-func GetIp() (string, error) {
-	// Get local IP address
-	conn, err := net.Dial(string(UDP), "8.8.8.8:80")
-	if err != nil {
-		return "", err
-	}
-	defer conn.Close()
-	ipAddress := conn.LocalAddr().(*net.UDPAddr).String()
-	return ipAddress, nil
-}
