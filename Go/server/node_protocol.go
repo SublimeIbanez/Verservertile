@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"go_server/protocol"
 )
 
@@ -10,91 +11,101 @@ type UpdateRequest struct {
 	LeaderAddress string
 	Nodes         map[string]string
 }
+
+func (ur *UpdateRequest) Marshal() ([]byte, error) {
+	if ur.LeaderId == "" {
+		return []byte{}, errors.New("leader id cannot be empty")
+	}
+	if ur.LeaderAddress == "" {
+		return []byte{}, errors.New("leader address cannot be empty")
+	}
+	if ur.Nodes == nil {
+		return []byte{}, errors.New("nodes cannot be a nil value")
+	}
+
+	return json.Marshal(ur)
+}
+
 type RegistrationRequest struct {
 	Address string
 }
 
-func RegisterRequest(node *Node) ([]byte, error) {
-	registrationRequest := RegistrationRequest{
-		Address: node.localAddress,
+func (rr *RegistrationRequest) Marshal() ([]byte, error) {
+	if rr.Address == "" {
+		return []byte{}, errors.New("invalid address, node must have an address")
 	}
-	register, err := json.Marshal(registrationRequest)
+	return json.Marshal(rr)
+}
+
+func RegisterRequest(node *Node) ([]byte, error) {
+	regReq := RegistrationRequest{
+		Address: node.address,
+	}
+	register, err := regReq.Marshal()
 	if err != nil {
 		return nil, err
 	}
-	baseMessage := protocol.BaseMessage{
-		Ok:         true,
-		Message:    []string{""},
-		Type:       protocol.Request,
-		Directive:  protocol.Register,
-		SourceType: node.nodeType,
-		Uuid:       node.uuid,
-		Data: map[protocol.Directive]*json.RawMessage{
-			protocol.Register: (*json.RawMessage)(&register),
-		},
+
+	base := protocol.NewRequest(true, []string{""}, protocol.Register)
+	base.EntityType = node.nodeType
+	base.Uuid = node.uuid
+	base.Data = map[protocol.Directive]*json.RawMessage{
+		protocol.Register: (*json.RawMessage)(&register),
 	}
-	return json.Marshal(baseMessage)
+
+	return base.Marshal(true)
 }
 
 func RegisterResponse(node *Node, ok bool, message []string) ([]byte, error) {
-	registrationResponse := UpdateRequest{
+	// Complete the struct
+	regRes := UpdateRequest{
 		LeaderId:      node.leader.uuid,
-		LeaderAddress: node.leader.leaderAddress,
+		LeaderAddress: node.leader.address,
 		Nodes:         node.nodes,
 	}
-	register, err := json.Marshal(registrationResponse)
+	// Marshal - ensure check for errors
+	register, err := regRes.Marshal()
 	if err != nil {
 		return nil, err
 	}
-	baseMessage := protocol.BaseMessage{
-		Ok:         ok,
-		Message:    message,
-		Type:       protocol.Response,
-		Directive:  protocol.Register,
-		SourceType: node.nodeType,
-		Uuid:       node.uuid,
-		Data: map[protocol.Directive]*json.RawMessage{
-			protocol.Register: (*json.RawMessage)(&register),
-		},
+	// Generate a new baseMessage and fill out to the values
+	base := protocol.NewResponse(ok, message, protocol.Register)
+	base.EntityType = node.nodeType
+	base.Uuid = node.uuid
+	base.Data = map[protocol.Directive]*json.RawMessage{
+		protocol.Register: (*json.RawMessage)(&register),
 	}
-	return json.Marshal(baseMessage)
+
+	// Return marshal, checking for errors
+	return base.Marshal(true)
 }
 
 func ShutdownRequest(node *Node) ([]byte, error) {
-	base := protocol.BaseMessage{
-		Ok:         true,
-		Message:    []string{""},
-		Type:       protocol.Request,
-		Directive:  protocol.Shutdown,
-		SourceType: node.nodeType,
-		Uuid:       node.uuid,
-	}
+	base := protocol.NewRequest(true, []string{""}, protocol.Shutdown)
+	base.EntityType = node.nodeType
+	base.Uuid = node.uuid
 
-	return json.Marshal(base)
+	return base.Marshal(false)
 }
 
 func UpdateNodeListRequest(node *Node) ([]byte, error) {
-	updateResponse := UpdateRequest{
+	updateReq := UpdateRequest{
 		LeaderId:      node.leader.uuid,
-		LeaderAddress: node.leader.leaderAddress,
+		LeaderAddress: node.leader.address,
 		Nodes:         node.nodes,
 	}
-	update, err := json.Marshal(updateResponse)
+
+	update, err := updateReq.Marshal()
 	if err != nil {
 		return nil, err
 	}
 
-	base := protocol.BaseMessage{
-		Ok:         true,
-		Message:    []string{""},
-		Type:       protocol.Request,
-		Directive:  protocol.UpdateNodesList,
-		SourceType: node.nodeType,
-		Uuid:       node.uuid,
-		Data: map[protocol.Directive]*json.RawMessage{
-			protocol.UpdateNodesList: (*json.RawMessage)(&update),
-		},
+	base := protocol.NewRequest(true, []string{""}, protocol.UpdateNodesList)
+	base.EntityType = node.nodeType
+	base.Uuid = node.uuid
+	base.Data = map[protocol.Directive]*json.RawMessage{
+		protocol.UpdateNodesList: (*json.RawMessage)(&update),
 	}
 
-	return json.Marshal(base)
+	return base.Marshal(true)
 }

@@ -34,10 +34,10 @@ func (node *Node) handleConnection(conn net.Conn) {
 		return
 	}
 
-	switch baseMessage.SourceType {
+	switch baseMessage.EntityType {
 	case utils.Client:
 		{
-			switch baseMessage.Type {
+			switch baseMessage.Direction {
 			case protocol.Request:
 				node.handleClientRequest(baseMessage)
 			case protocol.Response:
@@ -46,7 +46,7 @@ func (node *Node) handleConnection(conn net.Conn) {
 		}
 	case utils.Node, utils.Leader:
 		{
-			switch baseMessage.Type {
+			switch baseMessage.Direction {
 			case protocol.Request:
 				node.handleNodeRequest(baseMessage, data)
 			case protocol.Response:
@@ -127,7 +127,7 @@ func (node *Node) handleNodeRequest(base protocol.BaseMessage, data []byte) {
 
 			case utils.Node:
 				{ // Only the leader should update, pass to leader
-					conn, err := net.Dial(string(utils.TCP), node.leader.leaderAddress)
+					conn, err := net.Dial(string(utils.TCP), node.leader.address)
 					if err != nil {
 						node.outputChannel <- fmt.Sprintf("Could not connect with leader pass registration: %v", err)
 						break
@@ -156,7 +156,7 @@ func (node *Node) handleNodeRequest(base protocol.BaseMessage, data []byte) {
 
 			// Set the leader and update the Nodes list
 			node.leader.uuid = update.LeaderId
-			node.leader.leaderAddress = update.LeaderAddress
+			node.leader.address = update.LeaderAddress
 			if node.leader.uuid == node.uuid {
 				node.nodeType = utils.Leader
 				node.outputChannel <- "Updating node type to Leader"
@@ -205,7 +205,7 @@ func (node *Node) handleNodeResponse(base protocol.BaseMessage) {
 			}
 			// Set the leader and update the Nodes list
 			node.leader.uuid = register.LeaderId
-			node.leader.leaderAddress = register.LeaderAddress
+			node.leader.address = register.LeaderAddress
 			if node.leader.uuid == node.uuid {
 				node.nodeType = utils.Leader
 				node.outputChannel <- "Updating node type to Leader"

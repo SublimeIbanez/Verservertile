@@ -14,18 +14,22 @@ import (
 )
 
 type LeaderNode struct {
-	uuid          string
-	leaderAddress string
+	uuid    string
+	address string
 }
 
 type Node struct {
-	uuid          string
-	nodeType      utils.Entity
-	localAddress  string
-	leader        LeaderNode
-	nodes         map[string]string
-	cancel        context.CancelFunc
-	context       context.Context
+	// Default struct items
+	uuid     string
+	nodeType utils.Entity
+	address  string
+	leader   LeaderNode
+	nodes    map[string]string // uuid -> address
+	clients  map[string]string // uuid -> address
+	// For closing down and cleanup
+	cancel  context.CancelFunc
+	context context.Context
+	// For console management
 	outputChannel chan string
 }
 
@@ -36,16 +40,17 @@ func HandleNode(local string, remote string) {
 
 	// Create the node
 	node := Node{
-		uuid:          uuid.New().String(),
+		uuid:          strings.ReplaceAll(uuid.NewString(), "-", ""),
 		nodeType:      utils.Node,
-		localAddress:  local,
-		leader:        LeaderNode{uuid: "", leaderAddress: ""},
+		address:       local,
+		leader:        LeaderNode{},
 		nodes:         make(map[string]string),
+		clients:       make(map[string]string),
 		cancel:        cancel,
 		context:       context,
 		outputChannel: make(chan string, 100),
 	}
-	node.nodes[node.uuid] = node.localAddress
+	node.nodes[node.uuid] = node.address
 
 	// Listen for incoming
 	go node.listen()
@@ -68,7 +73,7 @@ func HandleNode(local string, remote string) {
 		// Connect with leader
 		conn, err := net.Dial(string(utils.TCP), remote)
 		if err != nil {
-			node.outputChannel <- fmt.Sprintf("Could not generate a connection with leader at %s on %s: %v", remote, node.localAddress, err)
+			node.outputChannel <- fmt.Sprintf("Could not generate a connection with leader at %s on %s: %v", remote, node.address, err)
 			node.Shutdown()
 		}
 		// Send the request
@@ -77,7 +82,7 @@ func HandleNode(local string, remote string) {
 	} else {
 		node.nodeType = utils.Leader
 		node.leader.uuid = node.uuid
-		node.leader.leaderAddress = node.localAddress
+		node.leader.address = node.address
 	}
 
 	wait.Wait()
@@ -136,9 +141,9 @@ func (node *Node) sendMessage(message []byte) {
 	}
 
 	if node.nodeType != utils.Leader {
-		conn, err := net.Dial(string(utils.TCP), node.leader.leaderAddress)
+		conn, err := net.Dial(string(utils.TCP), node.leader.address)
 		if err != nil {
-			node.outputChannel <- fmt.Sprintf("Could not contact leader %s :: %s", node.leader.uuid, node.leader.leaderAddress)
+			node.outputChannel <- fmt.Sprintf("Could not contact leader %s :: %s", node.leader.uuid, node.leader.address)
 		}
 		defer conn.Close()
 	}
@@ -154,14 +159,14 @@ func (node *Node) printNodeList() {
 func (node *Node) listen() {
 	node.outputChannel <- "Initiating listener..."
 	// Create the listener
-	listener, err := net.Listen(string(utils.TCP), node.localAddress)
+	listener, err := net.Listen(string(utils.TCP), node.address)
 	if err != nil {
-		node.outputChannel <- fmt.Sprintf("Failed to listen on %s: %v\n", node.localAddress, err)
+		node.outputChannel <- fmt.Sprintf("Failed to listen on %s: %v\n", node.address, err)
 		node.Shutdown()
 	}
 	defer listener.Close()
 
-	node.outputChannel <- fmt.Sprintf("Listening on %s\n", node.localAddress)
+	node.outputChannel <- fmt.Sprintf("Listening on %s\n", node.address)
 	go node.outputHandler()
 
 	// Listen for incoming connections
@@ -190,7 +195,7 @@ func (node *Node) Shutdown() {
 				continue
 			}
 			node.leader.uuid = k
-			node.leader.leaderAddress = v
+			node.leader.address = v
 			node.nodeType = utils.Node
 			break
 		}

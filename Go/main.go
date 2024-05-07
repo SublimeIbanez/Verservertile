@@ -28,7 +28,7 @@ func main() {
 	case utils.Node:
 		server.HandleNode(local, remote)
 	case utils.Client:
-		client.HandleClient(remote)
+		client.HandleClient(local, remote)
 	}
 }
 
