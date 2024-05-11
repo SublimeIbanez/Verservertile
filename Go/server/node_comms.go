@@ -3,10 +3,11 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"go_server/protocol"
+	"go_server/common"
 	"go_server/utils"
 	"io"
 	"net"
+	"slices"
 )
 
 func (node *Node) handleConnection(conn net.Conn) {
@@ -22,7 +23,7 @@ func (node *Node) handleConnection(conn net.Conn) {
 	}
 
 	data := buffer[:size]
-	var baseMessage protocol.BaseMessage
+	var baseMessage common.BaseMessage
 	err = json.Unmarshal(data, &baseMessage)
 	if err != nil {
 		node.outputChannel <- fmt.Sprintf("Error attempting to parse JSON: %v\n", err)
@@ -38,18 +39,18 @@ func (node *Node) handleConnection(conn net.Conn) {
 	case utils.Client:
 		{
 			switch baseMessage.Direction {
-			case protocol.Request:
-				node.handleClientRequest(baseMessage)
-			case protocol.Response:
-				node.handleClientResponse(baseMessage)
+			case common.Request:
+				node.handleClientRequest(baseMessage, conn)
+			case common.Response:
+				node.handleClientResponse(baseMessage, conn)
 			}
 		}
 	case utils.Node, utils.Leader:
 		{
 			switch baseMessage.Direction {
-			case protocol.Request:
+			case common.Request:
 				node.handleNodeRequest(baseMessage, data)
-			case protocol.Response:
+			case common.Response:
 				node.handleNodeResponse(baseMessage)
 			}
 		}
@@ -59,22 +60,42 @@ func (node *Node) handleConnection(conn net.Conn) {
 	}
 }
 
-func (node *Node) handleClientRequest(base protocol.BaseMessage) {
+func (node *Node) handleClientRequest(base common.BaseMessage, conn net.Conn) {
+	defer conn.Close()
 
-}
-
-func (node *Node) handleClientResponse(base protocol.BaseMessage) {
-
-}
-
-func (node *Node) handleNodeRequest(base protocol.BaseMessage, data []byte) {
 	switch base.Directive {
-	case protocol.Register: // ======= Register
+	case common.ServiceRequest:
+		{
+			var message []string
+			response, err := ServicesResponse(node)
+			if err != nil {
+				node.outputChannel <- fmt.Sprintf("Could not generate service response: %v", err)
+				message = append(message, fmt.Sprintf("Could not generate service response: %v", err))
+				response, err = ErrorResponse(node, message, common.ServiceRequest)
+				if err != nil {
+					node.outputChannel <- fmt.Sprintf("Could not generate error response: %v", err)
+					return
+				}
+			}
+			conn.Write(response)
+		}
+
+	default:
+	}
+}
+
+func (node *Node) handleClientResponse(base common.BaseMessage, conn net.Conn) {
+
+}
+
+func (node *Node) handleNodeRequest(base common.BaseMessage, data []byte) {
+	switch base.Directive {
+	case common.Register: // =========================================================================== Register
 		{
 			// Parse the request
 			message := []string{""}
 			ok := true
-			var address string
+			var regRequest RegistrationRequest
 			if _, k := node.nodes[base.Uuid]; k {
 				// If the node already exists in the network
 				ok = false
@@ -83,36 +104,52 @@ func (node *Node) handleNodeRequest(base protocol.BaseMessage, data []byte) {
 
 			if ok {
 				// If the node doesn't exist
-				var register RegistrationRequest
-				if err := json.Unmarshal(*base.Data[protocol.Register], &register); err != nil {
+				if err := json.Unmarshal(*base.Data[common.Register], &regRequest); err != nil {
 					ok = false
 					message = append(message, "Could not unmarshal registration request data.\n")
-				} else {
-					address = register.Address
 				}
 			}
 
+			node.mtx.RLock()
 			switch node.nodeType {
 			case utils.Leader:
 				{
+					node.mtx.RUnlock()
 					if ok {
-						node.nodes[base.Uuid] = address
-						node.outputChannel <- fmt.Sprintf("New <node :: %s :: %s>\nNodeList:", base.Uuid, address)
+						// Add new node to node list
+						node.mtx.Lock()
+						node.nodes[base.Uuid] = regRequest.Address
+						for _, service := range regRequest.Services {
+							// Make sure to not add a node that already exists within the list
+							if nodeList, k := node.nodeServices[service]; k && slices.Contains(*nodeList, base.Uuid) {
+								continue
+							}
+							// Add node's uuid to the services list
+							if node.nodeServices[service] == nil {
+								node.nodeServices[service] = &[]string{}
+							}
+							*node.nodeServices[service] = append(*node.nodeServices[service], base.Uuid)
+						}
+
+						node.mtx.Unlock()
+						// Print results
+						node.outputChannel <- fmt.Sprintf("New <node :: %s :: %s>\nNodeList:", base.Uuid, regRequest.Address)
 						node.printNodeList()
+						node.printNodeServiceList()
 					}
 
-					register, err := RegisterResponse(node, ok, message)
+					regResponse, err := RegisterResponse(node, ok, message)
 					if err != nil {
 						node.outputChannel <- fmt.Sprintf("Could not generate register response: %v", err)
 						break
 					}
 
-					conn, err := net.Dial(string(utils.TCP), address)
+					conn, err := net.Dial(string(utils.TCP), regRequest.Address)
 					if err != nil {
 						node.outputChannel <- fmt.Sprintf("Could not connect with node to register: %v", err)
 						break
 					}
-					conn.Write(register)
+					conn.Write(regResponse)
 					conn.Close()
 
 					update, err := UpdateNodeListRequest(node)
@@ -121,13 +158,13 @@ func (node *Node) handleNodeRequest(base protocol.BaseMessage, data []byte) {
 						break
 					}
 
-					go node.sendMessage(update)
-
+					node.sendMessage(update)
 				}
 
 			case utils.Node:
 				{ // Only the leader should update, pass to leader
-					conn, err := net.Dial(string(utils.TCP), node.leader.address)
+					node.mtx.RUnlock()
+					conn, err := net.Dial(string(utils.TCP), node.leader.Address)
 					if err != nil {
 						node.outputChannel <- fmt.Sprintf("Could not connect with leader pass registration: %v", err)
 						break
@@ -138,53 +175,71 @@ func (node *Node) handleNodeRequest(base protocol.BaseMessage, data []byte) {
 			}
 		}
 
-	case protocol.UpdateNodesList: // ======= UPDATE
+	case common.UpdateNodesList: // =========================================================================== UPDATE
 		{
 			// All but the leader handle this
+			node.mtx.RLock()
 			if node.nodeType == utils.Leader {
+				node.mtx.RUnlock()
 				return
 			}
+			node.mtx.RUnlock()
 
 			node.outputChannel <- "Updating nodes list"
 
 			var update UpdateRequest
-			err := json.Unmarshal(*base.Data[protocol.UpdateNodesList], &update)
+			err := json.Unmarshal(*base.Data[common.UpdateNodesList], &update)
 			if err != nil {
 				node.outputChannel <- fmt.Sprintf("Could not unmarshal update request: %v", err)
 				break
 			}
 
 			// Set the leader and update the Nodes list
-			node.leader.uuid = update.LeaderId
-			node.leader.address = update.LeaderAddress
-			if node.leader.uuid == node.uuid {
+			node.mtx.Lock()
+			node.leader.Uuid = update.LeaderId
+			node.leader.Address = update.LeaderAddress
+			if node.leader.Uuid == node.uuid {
 				node.nodeType = utils.Leader
+				node.removeServiceNode(node.uuid)
 				node.outputChannel <- "Updating node type to Leader"
 			}
-
 			node.nodes = update.Nodes
+			node.nodeServices = update.Services
+			node.mtx.Unlock()
+
 			node.outputChannel <- "Nodes List updated:"
 			node.printNodeList()
+			node.outputChannel <- "Services List updated:"
+			node.printNodeServiceList()
 		}
 
-	case protocol.Shutdown: // ======= Shutdown
+	case common.Shutdown: // ================================================================================== Shutdown
 		{
 			// Only the leader manages this
+			node.mtx.RLock()
 			if node.nodeType != utils.Leader {
+				node.mtx.RUnlock()
 				return
 			}
 
 			// If the node isn't in the list, then simply return
 			if _, ok := node.nodes[base.Uuid]; !ok {
+				node.mtx.RUnlock()
 				return
 			}
+			node.mtx.RUnlock()
 
-			node.outputChannel <- fmt.Sprintf("Removing <%s :: %s> from node list", base.Uuid, node.nodes[base.Uuid])
+			node.outputChannel <- fmt.Sprintf("Removing <%s::%s> from node lists", base.Uuid, node.nodes[base.Uuid])
+			node.mtx.Lock()
 			delete(node.nodes, base.Uuid)
+			node.removeServiceNode(base.Uuid)
+			node.mtx.Unlock()
+			node.printNodeList()
+			node.printNodeServiceList()
 
 			update, err := UpdateNodeListRequest(node)
 			if err != nil {
-				node.outputChannel <- fmt.Sprintf("Unable to generate udpate request: %v", err)
+				node.outputChannel <- fmt.Sprintf("Unable to generate update request: %v", err)
 				return
 			}
 			node.sendMessage(update)
@@ -192,28 +247,27 @@ func (node *Node) handleNodeRequest(base protocol.BaseMessage, data []byte) {
 	}
 }
 
-func (node *Node) handleNodeResponse(base protocol.BaseMessage) {
+func (node *Node) handleNodeResponse(base common.BaseMessage) {
 	switch base.Directive {
-	case protocol.Register:
+	case common.Register:
 		{
 			// Get the information
-			var register UpdateRequest
-			err := json.Unmarshal(*base.Data[protocol.Register], &register)
+			var leaderNode LeaderNode
+			err := json.Unmarshal(*base.Data[common.Register], &leaderNode)
 			if err != nil {
 				node.outputChannel <- fmt.Sprintf("Could not unmarshal register response: %v", err)
 				break
 			}
 			// Set the leader and update the Nodes list
-			node.leader.uuid = register.LeaderId
-			node.leader.address = register.LeaderAddress
-			if node.leader.uuid == node.uuid {
+			node.mtx.Lock()
+			defer node.mtx.Unlock()
+			node.leader.Uuid = leaderNode.Uuid
+			node.leader.Address = leaderNode.Address
+			if node.leader.Uuid == node.uuid {
 				node.nodeType = utils.Leader
+				node.removeServiceNode(node.uuid)
 				node.outputChannel <- "Updating node type to Leader"
 			}
-
-			node.nodes = register.Nodes
-			node.outputChannel <- "Nodes List updated:"
-			node.printNodeList()
 		}
 	}
 }

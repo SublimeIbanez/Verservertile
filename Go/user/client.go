@@ -1,12 +1,14 @@
-package client
+package user
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"go_server/utils"
 	"net"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 )
@@ -16,6 +18,8 @@ type Client struct {
 	localAddress  string
 	remoteAddress string
 	outputChannel chan string
+	services      map[string]*[]string // service -> addresses
+	mtx           sync.RWMutex
 	cancel        context.CancelFunc
 	context       context.Context
 }
@@ -32,16 +36,30 @@ func HandleClient(local string, remote string) {
 		outputChannel: make(chan string, 100),
 		cancel:        cancel,
 		context:       context,
+		services:      make(map[string]*[]string),
 	}
-	client.listen()
+	go client.listen()
 
+	var wait sync.WaitGroup
+	wait.Add(1)
+	go client.inputHandler(&wait)
+
+	// Make a request to get all of the offered services
+	services, err := client.ServiceRequest()
+	if err != nil {
+		fmt.Printf("Could not make a request for services")
+		client.Shutdown()
+	}
 	conn, err := net.Dial(string(utils.TCP), client.remoteAddress)
 	if err != nil {
 		fmt.Printf("Failed to connect to %s: %v\n", client.remoteAddress, err)
-		os.Exit(1)
+		client.Shutdown()
 	}
-	defer conn.Close()
+	conn.Write(services)
+	client.handleConnection(conn)
 
+	wait.Wait()
+	client.Shutdown()
 }
 
 func (client *Client) listen() {
@@ -75,17 +93,50 @@ func (client *Client) listen() {
 	}
 }
 
-func (client *Client) handleConnection(conn net.Conn) {
-	defer conn.Close()
-
-}
-
 func (client *Client) outputHandler() {
+	for out := range client.outputChannel {
+		select {
+		case <-client.context.Done():
+			return
+
+		default:
+			fmt.Println(out)
+		}
+	}
 
 }
 
-func (client *Client) inputHandler() {
+func (client *Client) inputHandler(wait *sync.WaitGroup) {
+	defer wait.Done()
+	scanner := bufio.NewScanner(os.Stdin)
 
+	for scanner.Scan() {
+		select {
+		case <-client.context.Done():
+			return
+
+		default:
+			text := strings.ToLower(scanner.Text())
+			client.outputChannel <- "You typed " + text
+			if text == "exit" {
+				client.context.Done()
+				return
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		client.outputChannel <- "Error reading from the console: " + err.Error()
+	}
+
+}
+
+func (client *Client) printServiceList() {
+	client.outputChannel <- "Service List:"
+	for service := range client.services {
+		client.outputChannel <- fmt.Sprintf("  - %s", service)
+	}
+	client.outputChannel <- ""
 }
 
 func (client *Client) Shutdown() {

@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"go_server/client"
 	"go_server/server"
+	"go_server/user"
 	"go_server/utils"
 	"net"
 	"os"
@@ -28,7 +28,7 @@ func main() {
 	case utils.Node:
 		server.HandleNode(local, remote)
 	case utils.Client:
-		client.HandleClient(local, remote)
+		user.HandleClient(local, remote)
 	}
 }
 
@@ -61,115 +61,103 @@ func ParseArgs() {
 	var remotePort int
 	var localPort int
 	var err error
-	// Validate host
-	switch mode {
-	case utils.Node:
-		// Process remote (optional)
-		if remote != "" {
-			// Validate remote
-			if !strings.Contains(remote, ":") {
-				errorMessage = append(errorMessage, "Port not provided, using default: 8080")
-				errorMessage = append(errorMessage, "  INFO: Port input must use a colon (e.g. example_address:8080)")
-				remotePort = 8080
-				remote = fmt.Sprintf("%s:%d", remote, remotePort)
+	// Validate remote
+	if mode == utils.Client && remote == "" {
+		remoteValid = false
+	}
 
-				// Attempt a connection to ensure the remote is proper
-				listen, err := net.Dial(string(utils.TCP), remote)
-				if err != nil {
-					remoteValid = false
-					errorMessage = append(errorMessage, "Could not contact remote:")
-					errorMessage = append(errorMessage, fmt.Sprintf("  Ensure remote is correct. Expected: example:port, received %s", remote))
-					goto NODE_LOCAL
-				}
-				listen.Close()
-				goto NODE_LOCAL
-			}
+	if remote != "" {
+		// Validate remote
+		if !strings.Contains(remote, ":") {
+			errorMessage = append(errorMessage, "Port not provided, using default: 8080")
+			errorMessage = append(errorMessage, "  INFO: Port input must use a colon (e.g. example_address:8080)")
+			remotePort = 8080
+			remote = fmt.Sprintf("%s:%d", remote, remotePort)
 
-			remoteValidation := strings.Split(remote, ":")
-			if len(remoteValidation) != 2 {
-				remoteValid = false
-				errorMessage = append(errorMessage, "Incorrect remote format provided\n")
-				errorMessage = append(errorMessage, fmt.Sprintf("  Expected: example_address:port, received %s\n", remote))
-				goto NODE_LOCAL
-			}
-
-			if remoteValidation[0] == "" {
-				remoteValid = false
-				errorMessage = append(errorMessage, "Invalid input for remote\n")
-				errorMessage = append(errorMessage, fmt.Sprintf("  Expected: example_address:port, received %s\n", remote))
-				goto NODE_LOCAL
-			}
-
-			remotePort, err = strconv.Atoi(remoteValidation[1])
+			// Attempt a connection to ensure the remote is proper
+			listen, err := net.Dial(string(utils.TCP), remote)
 			if err != nil {
-				errorMessage = append(errorMessage, "Could not parse the port provided, using default: 8080\n")
-				remotePort = 8080
+				remoteValid = false
+				errorMessage = append(errorMessage, "Could not contact remote:")
+				errorMessage = append(errorMessage, fmt.Sprintf("  Ensure remote is correct. Expected: example:port, received %s", remote))
+				goto LOCAL
 			}
-			remote = fmt.Sprintf("%s:%d", remoteValidation[0], remotePort)
+			listen.Close()
+			goto LOCAL
 		}
 
-		// Process local (optional)
-	NODE_LOCAL:
-		if local != "" {
-			if !strings.Contains(local, ":") {
-				errorMessage = append(errorMessage, "INFO: Port input must use a colon (e.g. example_address:8080)")
-				errorMessage = append(errorMessage, "  Port not provided, using default: 8080")
-				localPort = 8080
-				local = fmt.Sprintf("%s:%d", local, localPort)
-
-				// Attempt a connection to ensure the remote is proper
-				listen, err := net.Listen(string(utils.TCP), local)
-				if err != nil {
-					localValid = false
-					errorMessage = append(errorMessage, "Incorrect remote format provided")
-					errorMessage = append(errorMessage, fmt.Sprintf("  Expected: example_address:port, received %s", local))
-					goto NODE_END
-				}
-				listen.Close()
-				goto NODE_END
-			}
-
-			if len(strings.Split(local, ":")) != 2 {
-				localValid = false
-				errorMessage = append(errorMessage, "Incorrect Local format provided")
-				errorMessage = append(errorMessage, fmt.Sprintf("  Expected: example_address:port, received %s", local))
-				goto NODE_END
-			}
-
-			localValidation := strings.Split(local, ":")
-			if localValidation[0] == "" {
-				fmt.Println("No Local information provided, using default: 0.0.0.0")
-				localValidation[0] = "0.0.0.0"
-			}
-
-			localPort, err = strconv.Atoi(localValidation[1])
-			if err != nil {
-				fmt.Println("Could not parse the port provided, attempting with default port: 8080")
-				localPort = 8080
-			}
-			local = fmt.Sprintf("%s:%d", localValidation[0], localPort)
-			goto NODE_END
-		}
-
-		fmt.Println("No Local information provided, using defaults.")
-		local = fmt.Sprintf("%s:%d", "0.0.0.0", 8080)
-
-	NODE_END:
-		if !localValid || !remoteValid {
-			valid = false
-		}
-
-	case utils.Client:
-		if remote == "" {
-			errorMessage = append(errorMessage, "Invalid input:\n")
-			errorMessage = append(errorMessage, "  Expected: example_address:port, nothing was recieved\n")
+		remoteValidation := strings.Split(remote, ":")
+		if len(remoteValidation) != 2 {
 			remoteValid = false
-			valid = false
-		} else {
-
+			errorMessage = append(errorMessage, "Incorrect remote format provided\n")
+			errorMessage = append(errorMessage, fmt.Sprintf("  Expected: example_address:port, received %s\n", remote))
+			goto LOCAL
 		}
-		fmt.Println("Not set up yet kekekekekeke")
-		// Process remote (required)
+
+		if remoteValidation[0] == "" {
+			remoteValid = false
+			errorMessage = append(errorMessage, "Invalid input for remote\n")
+			errorMessage = append(errorMessage, fmt.Sprintf("  Expected: example_address:port, received %s\n", remote))
+			goto LOCAL
+		}
+
+		remotePort, err = strconv.Atoi(remoteValidation[1])
+		if err != nil {
+			errorMessage = append(errorMessage, "Could not parse the port provided, using default: 8080\n")
+			remotePort = 8080
+		}
+		remote = fmt.Sprintf("%s:%d", remoteValidation[0], remotePort)
+	}
+
+	// Process local (optional)
+LOCAL:
+	if local != "" {
+		if !strings.Contains(local, ":") {
+			errorMessage = append(errorMessage, "INFO: Port input must use a colon (e.g. example_address:8080)")
+			errorMessage = append(errorMessage, "  Port not provided, using default: 8080")
+			localPort = 8080
+			local = fmt.Sprintf("%s:%d", local, localPort)
+
+			// Attempt a connection to ensure the remote is proper
+			listen, err := net.Listen(string(utils.TCP), local)
+			if err != nil {
+				localValid = false
+				errorMessage = append(errorMessage, "Incorrect remote format provided")
+				errorMessage = append(errorMessage, fmt.Sprintf("  Expected: example_address:port, received %s", local))
+				goto END
+			}
+			listen.Close()
+			goto END
+		}
+
+		if len(strings.Split(local, ":")) != 2 {
+			localValid = false
+			errorMessage = append(errorMessage, "Incorrect Local format provided")
+			errorMessage = append(errorMessage, fmt.Sprintf("  Expected: example_address:port, received %s", local))
+			goto END
+		}
+
+		localValidation := strings.Split(local, ":")
+		if localValidation[0] == "" {
+			fmt.Println("No Local information provided, using default: 0.0.0.0")
+			localValidation[0] = "0.0.0.0"
+		}
+
+		localPort, err = strconv.Atoi(localValidation[1])
+		if err != nil {
+			fmt.Println("Could not parse the port provided, attempting with default port: 8080")
+			localPort = 8080
+		}
+		local = fmt.Sprintf("%s:%d", localValidation[0], localPort)
+		goto END
+	}
+
+	fmt.Println("No Local information provided, using defaults.")
+	local = fmt.Sprintf("%s:%d", "0.0.0.0", 8080)
+
+END:
+	if !localValid || !remoteValid {
+		valid = false
 	}
 
 	for _, msg := range errorMessage {

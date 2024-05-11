@@ -1,4 +1,4 @@
-package protocol
+package common
 
 import (
 	"encoding/json"
@@ -20,11 +20,12 @@ const (
 	Response     Direction = 2
 
 	// Directive - Nil is erroneous / incomplete base message
-	NilDirective    Directive = 0
-	Register        Directive = 1
-	Shutdown        Directive = 2
-	UpdateNodesList Directive = 3
-	ServiceRequest  Directive = 4
+	NilDirective     Directive = 0
+	Register         Directive = 1
+	Shutdown         Directive = 2
+	UpdateNodesList  Directive = 3
+	ServiceRequest   Directive = 4
+	ServiceOperation Directive = 5
 )
 
 // `BaseMessage` is the only message being passed to and from entities within or connecting to the network
@@ -103,4 +104,16 @@ func (base *BaseMessage) Marshal(dataAttached bool) ([]byte, error) {
 	}
 
 	return json.Marshal(base)
+}
+
+type ServiceResponse struct {
+	ServicesList map[string]*[]string
+}
+
+func (sr *ServiceResponse) Marshal() ([]byte, error) {
+	if sr.ServicesList == nil {
+		return nil, errors.New("services list cannot be nil")
+	}
+
+	return json.Marshal(sr)
 }

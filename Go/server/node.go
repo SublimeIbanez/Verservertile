@@ -1,12 +1,10 @@
 package server
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"go_server/utils"
 	"net"
-	"os"
 	"strings"
 	"sync"
 
@@ -14,18 +12,21 @@ import (
 )
 
 type LeaderNode struct {
-	uuid    string
-	address string
+	Uuid    string
+	Address string
 }
 
 type Node struct {
 	// Default struct items
-	uuid     string
-	nodeType utils.Entity
-	address  string
-	leader   LeaderNode
-	nodes    map[string]string // uuid -> address
-	clients  map[string]string // uuid -> address
+	uuid         string
+	nodeType     utils.Entity
+	address      string
+	leader       LeaderNode
+	nodes        map[string]string    // uuid -> address
+	nodeServices map[string]*[]string // service -> []uuid
+	serviceList  []string             // List of services this node manages
+	// For maintaining concurrency
+	mtx sync.RWMutex
 	// For closing down and cleanup
 	cancel  context.CancelFunc
 	context context.Context
@@ -45,7 +46,8 @@ func HandleNode(local string, remote string) {
 		address:       local,
 		leader:        LeaderNode{},
 		nodes:         make(map[string]string),
-		clients:       make(map[string]string),
+		nodeServices:  make(map[string]*[]string),
+		serviceList:   []string{"chat"},
 		cancel:        cancel,
 		context:       context,
 		outputChannel: make(chan string, 100),
@@ -61,99 +63,41 @@ func HandleNode(local string, remote string) {
 	go node.inputHandler(&wait)
 
 	// Initialization
-	if remote != "" {
+	if remote == "" {
+		node.nodeType = utils.Leader
+		node.leader.Uuid = node.uuid
+		node.leader.Address = node.address
+	} else {
+		// Initialize the node with its services
+		node.initServices()
+
 		// Register with the leader
 		node.outputChannel <- fmt.Sprintf("Attempting to register with Leader at: %s", remote)
 		registerRequest, err := RegisterRequest(&node)
 		if err != nil {
 			fmt.Printf("Could not generate registration request: %v", err)
-			node.Shutdown()
+			node.shutdown()
 		}
 
 		// Connect with leader
 		conn, err := net.Dial(string(utils.TCP), remote)
 		if err != nil {
 			node.outputChannel <- fmt.Sprintf("Could not generate a connection with leader at %s on %s: %v", remote, node.address, err)
-			node.Shutdown()
+			node.shutdown()
 		}
 		// Send the request
 		conn.Write(registerRequest)
 		conn.Close()
-	} else {
-		node.nodeType = utils.Leader
-		node.leader.uuid = node.uuid
-		node.leader.address = node.address
 	}
+
+	node.mtx.RLock()
+	if node.nodeType != utils.Leader {
+		node.printServiceList()
+	}
+	node.mtx.RUnlock()
 
 	wait.Wait()
-	node.Shutdown()
-}
-
-func (node *Node) outputHandler() {
-	for out := range node.outputChannel {
-		select {
-		case <-node.context.Done():
-			return
-
-		default:
-			fmt.Println(out)
-		}
-	}
-}
-
-func (node *Node) inputHandler(wait *sync.WaitGroup) {
-	defer wait.Done()
-	scanner := bufio.NewScanner(os.Stdin)
-
-	for scanner.Scan() {
-		select {
-		case <-node.context.Done():
-			return
-
-		default:
-			text := strings.ToLower(scanner.Text())
-			node.outputChannel <- "You typed " + text
-			if text == "exit" {
-				node.context.Done()
-				return
-			}
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		node.outputChannel <- "Error reading from the console: " + err.Error()
-	}
-}
-
-func (node *Node) sendMessage(message []byte) {
-	for id, address := range node.nodes {
-		if id == node.uuid {
-			continue
-		}
-
-		conn, err := net.Dial(string(utils.TCP), address)
-		if err != nil {
-			node.outputChannel <- fmt.Sprintf("Could not contact node %s :: %s", id, address)
-			break
-		}
-		defer conn.Close()
-		conn.Write(message)
-	}
-
-	if node.nodeType != utils.Leader {
-		conn, err := net.Dial(string(utils.TCP), node.leader.address)
-		if err != nil {
-			node.outputChannel <- fmt.Sprintf("Could not contact leader %s :: %s", node.leader.uuid, node.leader.address)
-		}
-		defer conn.Close()
-	}
-}
-
-func (node *Node) printNodeList() {
-	for id, a := range node.nodes {
-		node.outputChannel <- fmt.Sprintf("    - %s :: %s", id, a)
-	}
-	node.outputChannel <- ""
+	node.shutdown()
 }
 
 func (node *Node) listen() {
@@ -162,7 +106,7 @@ func (node *Node) listen() {
 	listener, err := net.Listen(string(utils.TCP), node.address)
 	if err != nil {
 		node.outputChannel <- fmt.Sprintf("Failed to listen on %s: %v\n", node.address, err)
-		node.Shutdown()
+		node.shutdown()
 	}
 	defer listener.Close()
 
@@ -187,19 +131,39 @@ func (node *Node) listen() {
 	}
 }
 
-func (node *Node) Shutdown() {
-	// If current leader, ensure the other nodes are updated first
-	if node.uuid == node.leader.uuid && len(node.nodes) > 0 {
-		for k, v := range node.nodes {
-			if k == node.uuid {
-				continue
-			}
-			node.leader.uuid = k
-			node.leader.address = v
-			node.nodeType = utils.Node
+func (node *Node) sendMessage(message []byte) {
+	for id, address := range node.nodes {
+		if id == node.uuid {
+			continue
+		}
+
+		conn, err := net.Dial(string(utils.TCP), address)
+		if err != nil {
+			node.outputChannel <- fmt.Sprintf("Could not contact node %s :: %s", id, address)
 			break
 		}
+		defer conn.Close()
+		conn.Write(message)
+	}
+}
+
+func (node *Node) shutdown() {
+	// If current leader, ensure the other nodes are updated first
+	if node.uuid == node.leader.Uuid && len(node.nodes) > 0 {
+		// Change the leader
+		for k, v := range node.nodes {
+			if k != node.uuid {
+				node.leader.Uuid = k
+				node.leader.Address = v
+				node.nodeType = utils.Node
+				break
+			}
+		}
+		// Remove from the nodes list
 		delete(node.nodes, node.uuid)
+		node.removeServiceNode(node.leader.Uuid)
+
+		// Update the other nodes
 		update, err := UpdateNodeListRequest(node)
 		if err != nil {
 			fmt.Println("No moar leadaaa")
@@ -208,10 +172,11 @@ func (node *Node) Shutdown() {
 	}
 
 	shutdown, err := ShutdownRequest(node)
-	if err != nil {
-		fmt.Println("Rip ig??")
+	if err == nil {
+		node.sendMessage(shutdown)
+	} else {
+		fmt.Println("Failed to prepare shutdown message")
 	}
-	node.sendMessage(shutdown)
 
 	close(node.outputChannel)
 	fmt.Println("Exiting node")
