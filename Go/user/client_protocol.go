@@ -36,17 +36,17 @@ type ServiceOperation struct {
 // --> user puts in other input
 // <-- Returns back to Menu2 or performs next action
 
-// Instruction: 0000 0000 0000 0000 0000 0000 0000 0000
-// - 0bx0000. == Back one level
-// - 0bx0001. == Display content -- Back Command: Display[0]
-// - 0bx0011. == Await user selection --> Perform next instruction -- Back Command: Display[0]
-// - 0bx0011. == Display content --> Take user input (Display: []string -> foreach user inputs string) --> Perform Next Instruction
-// - 0bx0100. == Display content --> Take user input (Display: []string -> foreach user inputs string) --> Perform Previous Instruction
-// - 0bx0101. == Send/Receive :: Argument Prefix: Display[0] -> Location: Display[1] -> Update Interval: Display[2]
-// - 0bx0111. == Send/Recieve :: Update -- Display[0]
-// - 0bx1000. == Load from FS
-// - 0bx1001. == Save to FS
-// - 0b.1111x
+// Instruction: 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
+// - 0bxxxxxxxxxxxxxxxx0000 == Back one level
+// - 0bxxxxxxxxxxxxxxxx0001 == Display content -- Back Command: Display[0]
+// - 0bxxxxxxxxxxxxxxxx0011 == Await user selection --> Perform next instruction -- Back Command: Display[0]
+// - 0bxxxxxxxxxxxxxxxx0011 == Display content --> Take user input (Display: []string -> foreach user inputs string) --> Perform Next Instruction
+// - 0bxxxxxxxxxxxxxxxx0100 == Display content --> Take user input (Display: []string -> foreach user inputs string) --> Perform Previous Instruction
+// - 0bxxxxxxxxxxxxxxxx0101 == Send/Receive :: Argument Prefix: Display[0] -> Location: Display[1] -> Update Interval: Display[2]
+// - 0bxxxxxxxxxxxxxxxx0111 == Send/Recieve :: Update -- Display[0]
+// - 0bxxxxxxxxxxxxxxxx1000 == Load from FS
+// - 0bxxxxxxxxxxxxxxxx1001 == Save to FS
+// - 0bxxxxxxxxxxxxxxxx1011 == Serve HTML: Display [0] + CSS: Display[1]
 type Instruction struct {
 	ServiceId   string
 	Level       uint8
