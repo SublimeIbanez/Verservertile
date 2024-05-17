@@ -40,7 +40,7 @@ func (node *Node) handleConnection(conn net.Conn) {
 		{
 			switch baseMessage.Direction {
 			case common.Request:
-				node.handleClientRequest(baseMessage, conn)
+				node.handleClientRequest(&baseMessage, &conn)
 			case common.Response:
 				node.handleClientResponse(baseMessage, conn)
 			}
@@ -60,27 +60,35 @@ func (node *Node) handleConnection(conn net.Conn) {
 	}
 }
 
-func (node *Node) handleClientRequest(base common.BaseMessage, conn net.Conn) {
-	defer conn.Close()
-
+func (node *Node) handleClientRequest(base *common.BaseMessage, conn *net.Conn) {
 	switch base.Directive {
-	case common.ServiceRequest:
+	case common.ServicesRequest:
 		{
+			defer (*conn).Close()
+
 			var message []string
-			response, err := ServicesResponse(node)
+			response, err := ServicesListResponse(node)
 			if err != nil {
 				node.outputChannel <- fmt.Sprintf("Could not generate service response: %v", err)
 				message = append(message, fmt.Sprintf("Could not generate service response: %v", err))
-				response, err = ErrorResponse(node, message, common.ServiceRequest)
+				response, err = ErrorResponse(node, message, common.ServicesRequest)
 				if err != nil {
 					node.outputChannel <- fmt.Sprintf("Could not generate error response: %v", err)
 					return
 				}
 			}
-			conn.Write(response)
+			(*conn).Write(response)
+		}
+
+	case common.ServiceOperation:
+		{
+			node.handleService(base, conn)
 		}
 
 	default:
+		{
+			defer (*conn).Close()
+		}
 	}
 }
 
@@ -121,14 +129,14 @@ func (node *Node) handleNodeRequest(base common.BaseMessage, data []byte) {
 						node.nodes[base.Uuid] = regRequest.Address
 						for _, service := range regRequest.Services {
 							// Make sure to not add a node that already exists within the list
-							if nodeList, k := node.nodeServices[service]; k && slices.Contains(*nodeList, base.Uuid) {
+							if nodeList, k := node.nodeServices[Service(service)]; k && slices.Contains(*nodeList, base.Uuid) {
 								continue
 							}
 							// Add node's uuid to the services list
-							if node.nodeServices[service] == nil {
-								node.nodeServices[service] = &[]string{}
+							if node.nodeServices[Service(service)] == nil {
+								node.nodeServices[Service(service)] = &[]string{}
 							}
-							*node.nodeServices[service] = append(*node.nodeServices[service], base.Uuid)
+							*node.nodeServices[Service(service)] = append(*node.nodeServices[Service(service)], base.Uuid)
 						}
 
 						node.mtx.Unlock()

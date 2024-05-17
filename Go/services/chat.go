@@ -18,23 +18,23 @@ const (
 )
 
 type ChatService struct {
-	PublicRooms  []Room
-	PrivateRooms []Room
+	PublicRooms  []ChatRoom
+	PrivateRooms []ChatRoom
 }
 
 func HandleChatService() *ChatService {
 	return &ChatService{
-		PublicRooms:  []Room{},
-		PrivateRooms: []Room{},
+		PublicRooms:  []ChatRoom{},
+		PrivateRooms: []ChatRoom{},
 	}
 }
 
-type Room struct {
+type ChatRoom struct {
 	Public   bool
 	Users    map[string]string // uuid -> username
 	Messages []Message
 	Input    chan Message
-	Output   chan Message
+	Output   chan []Message
 	mtx      sync.RWMutex
 	context  context.Context
 	cancel   context.CancelFunc
@@ -46,15 +46,15 @@ type Message struct {
 	Content   string
 }
 
-func CreateRoom(public bool) *Room {
+func CreateRoom(public bool) *ChatRoom {
 	context, cancel := context.WithCancel(context.Background())
 
-	room := Room{
+	room := ChatRoom{
 		Public:   public,
 		Users:    make(map[string]string),
 		Messages: []Message{},
 		Input:    make(chan Message, 100),
-		Output:   make(chan Message, 100),
+		Output:   make(chan []Message),
 		context:  context,
 		cancel:   cancel,
 	}
@@ -64,13 +64,14 @@ func CreateRoom(public bool) *Room {
 	return &room
 }
 
-func (room *Room) handleInput() {
+func (room *ChatRoom) handleInput() {
 	for message := range room.Input {
 		select {
 		case <-room.context.Done():
 
 		default:
 			{
+				// Intake the message andupdate the messages array
 				room.mtx.Lock()
 				if len(room.Messages) >= CHAT_MESSAGE_COUNT_MAX {
 					remove := len(room.Messages) - CHAT_MESSAGE_COUNT_MAX + 1
@@ -78,6 +79,11 @@ func (room *Room) handleInput() {
 				}
 				room.Messages = append(room.Messages, message)
 				room.mtx.Unlock()
+
+				// Send the updated array to the output
+				room.mtx.RLock()
+				room.Output <- room.Messages
+				room.mtx.RUnlock()
 			}
 		}
 	}

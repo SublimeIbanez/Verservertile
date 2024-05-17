@@ -10,7 +10,7 @@ type UpdateRequest struct {
 	LeaderId      string
 	LeaderAddress string
 	Nodes         map[string]string
-	Services      map[string]*[]string
+	Services      map[Service]*[]string
 }
 
 func (ur *UpdateRequest) Marshal() ([]byte, error) {
@@ -32,7 +32,7 @@ func (ur *UpdateRequest) Marshal() ([]byte, error) {
 
 type RegistrationRequest struct {
 	Address  string
-	Services []string
+	Services []Service
 }
 
 func (rr *RegistrationRequest) Marshal() ([]byte, error) {
@@ -138,8 +138,20 @@ func UpdateNodeListRequest(node *Node) ([]byte, error) {
 	return base.Marshal(true)
 }
 
-func ServicesResponse(node *Node) ([]byte, error) {
-	serviceResponse := common.ServiceResponse{
+type ServiceListResponse struct {
+	ServicesList map[Service]*[]string
+}
+
+func (sr *ServiceListResponse) Marshal() ([]byte, error) {
+	if sr.ServicesList == nil {
+		return nil, errors.New("services list cannot be nil")
+	}
+
+	return json.Marshal(sr)
+}
+
+func ServicesListResponse(node *Node) ([]byte, error) {
+	serviceResponse := ServiceListResponse{
 		ServicesList: node.nodeServices,
 	}
 
@@ -148,11 +160,11 @@ func ServicesResponse(node *Node) ([]byte, error) {
 		return nil, err
 	}
 
-	base := common.NewResponse(true, []string{""}, common.ServiceRequest)
+	base := common.NewResponse(true, []string{""}, common.ServicesRequest)
 	base.EntityType = node.nodeType
 	base.Uuid = node.uuid
 	base.Data = map[common.Directive]*json.RawMessage{
-		common.ServiceRequest: (*json.RawMessage)(&response),
+		common.ServicesRequest: (*json.RawMessage)(&response),
 	}
 
 	return base.Marshal(true)
