@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go_server/common"
+	"go_server/server"
 	"go_server/utils"
 	"io"
 	"net"
@@ -57,10 +58,10 @@ func (client *Client) handleRequest(base common.BaseMessage) {
 
 func (client *Client) handleResponse(base common.BaseMessage) {
 	switch base.Directive {
-	case common.ServiceRequest:
+	case common.ServicesRequest:
 		{
-			var servicesResponse common.ServiceResponse
-			err := json.Unmarshal(*base.Data[common.ServiceRequest], &servicesResponse)
+			var servicesResponse server.ServiceListResponse
+			err := json.Unmarshal(*base.Data[common.ServicesRequest], &servicesResponse)
 			if err != nil {
 				client.outputChannel <- fmt.Sprintf("Could not unmarshal the service response: %v", err)
 			}

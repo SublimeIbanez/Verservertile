@@ -27,9 +27,4 @@ var EntityTypes = map[string]Entity{
 const (
 	// Maximum buffer size in bytes for message passing
 	BUFFER_SIZE = 1_024
-
-	// Maximum number of chat messages retained in memory
-	CHAT_MESSAGE_COUNT_MAX = 1_000
-	// Maximum number of characters in a chat message
-	CHAT_MESSAGE_SIZE_MAX = 500
 )

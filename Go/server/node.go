@@ -22,9 +22,9 @@ type Node struct {
 	nodeType     utils.Entity
 	address      string
 	leader       LeaderNode
-	nodes        map[string]string    // uuid -> address
-	nodeServices map[string]*[]string // service -> []uuid
-	serviceList  []string             // List of services this node manages
+	nodes        map[string]string     // uuid -> address
+	nodeServices map[Service]*[]string // service -> []uuid
+	serviceList  []Service             // List of services this node manages
 	// For maintaining concurrency
 	mtx sync.RWMutex
 	// For closing down and cleanup
@@ -46,12 +46,12 @@ func HandleNode(local string, remote string) {
 		address:       local,
 		leader:        LeaderNode{},
 		nodes:         make(map[string]string),
-		nodeServices:  make(map[string]*[]string),
-		serviceList:   []string{"chat"},
+		nodeServices:  make(map[Service]*[]string),
 		cancel:        cancel,
 		context:       context,
 		outputChannel: make(chan string, 100),
 	}
+	node.initServices()
 	node.nodes[node.uuid] = node.address
 
 	// Listen for incoming

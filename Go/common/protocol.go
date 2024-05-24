@@ -24,8 +24,9 @@ const (
 	Register         Directive = 1
 	Shutdown         Directive = 2
 	UpdateNodesList  Directive = 3
-	ServiceRequest   Directive = 4
+	ServicesRequest  Directive = 4
 	ServiceOperation Directive = 5
+	ServiceChoice    Directive = 6
 )
 
 // `BaseMessage` is the only message being passed to and from entities within or connecting to the network
@@ -106,14 +107,31 @@ func (base *BaseMessage) Marshal(dataAttached bool) ([]byte, error) {
 	return json.Marshal(base)
 }
 
-type ServiceResponse struct {
-	ServicesList map[string]*[]string
+// I would love to actually implement this but it simply would cost too much time for now
+// Service -> Maps the level to the service
+type ServiceOp struct {
+	Service  string
+	Levels   uint8
+	Services map[uint8][]Instruction
 }
 
-func (sr *ServiceResponse) Marshal() ([]byte, error) {
-	if sr.ServicesList == nil {
-		return nil, errors.New("services list cannot be nil")
-	}
-
-	return json.Marshal(sr)
+// Instruction: 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
+// - 0bxxxxxxxxxxxxxxxx0000 == Back one level
+// - 0bxxxxxxxxxxxxxxxx0001 == Display content -- Back Command: Display[0]
+// - 0bxxxxxxxxxxxxxxxx0011 == Await user selection --> Perform next instruction -- Back Command: Display[0]
+// - 0bxxxxxxxxxxxxxxxx0011 == Display content --> Take user input (Display: []string -> foreach user inputs string) --> Perform Next Instruction
+// - 0bxxxxxxxxxxxxxxxx0100 == Display content --> Take user input (Display: []string -> foreach user inputs string) --> Perform Previous Instruction
+// - 0bxxxxxxxxxxxxxxxx0101 == Send/Receive :: Argument Prefix: Display[0] -> Location: Display[1] -> Update Interval: Display[2]
+// - 0bxxxxxxxxxxxxxxxx0111 == Send/Recieve :: Update -- Display[0]
+// - 0bxxxxxxxxxxxxxxxx1000 == Load from FS
+// - 0bxxxxxxxxxxxxxxxx1001 == Save to FS
+// - 0b1111xxxxxxxxxxxxxxxx ==
+type Instruction struct {
+	ServiceId   string
+	Level       uint8
+	Title       string
+	Instruction uint32
+	Commands    map[string]Instruction
+	Display     []string
+	Input       []string
 }
