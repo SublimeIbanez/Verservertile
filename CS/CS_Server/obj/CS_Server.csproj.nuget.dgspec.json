@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Kokurio\\Desktop\\Code\\Server\\CS\\CS_Server\\CS_Server.csproj": {}
+    "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\CS_Server\\CS_Server.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Kokurio\\Desktop\\Code\\Server\\CS\\CS_Server\\CS_Server.csproj": {
+    "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\CS_Server\\CS_Server.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Kokurio\\Desktop\\Code\\Server\\CS\\CS_Server\\CS_Server.csproj",
+        "projectUniqueName": "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\CS_Server\\CS_Server.csproj",
         "projectName": "CS_Server",
-        "projectPath": "C:\\Users\\Kokurio\\Desktop\\Code\\Server\\CS\\CS_Server\\CS_Server.csproj",
+        "projectPath": "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\CS_Server\\CS_Server.csproj",
         "packagesPath": "C:\\Users\\Kokurio\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Kokurio\\Desktop\\Code\\Server\\CS\\CS_Server\\obj\\",
+        "outputPath": "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\CS_Server\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "E:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
