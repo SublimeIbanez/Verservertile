@@ -46,17 +46,42 @@ argv.slice(0).forEach(arg => {
 
         case Arguments.LocalArg: {
             // Parse and error check the argument
+            let pos = arg.indexOf(":");
             let values = arg.split(":");
-            // For now just use the passed argument
-            local = arg;
+            if (pos > 0 && values.length > 1) {
+                try {
+                    parseInt(values[1]);
+                } catch (error) {
+                    console.log(`Could not parse port - defaulting to 8080: ${error}`);
+                } finally {
+                    values[1] = "8080";
+                }
+            } else {
+                values[1] = "8080";
+            }
+            local = `${values[0]}:${values[1]}`
             break;
         }
 
         case Arguments.RemoteArg: {
-            // Parse and error check the argument
+            let pos = arg.indexOf(":");
+            if (pos === -1) {
+                console.log("Must pass correct remote\n  Expected: hostname:port");
+                process.exit(1);
+            }
             let values = arg.split(":");
-            // For now just use the passed argument
-            remote = arg;
+            if (pos > 0 && values.length > 1) {
+                try {
+                    parseInt(values[1]);
+                } catch (error) {
+                    console.log(`Could not parse port - defaulting to 8080: ${error}`);
+                } finally {
+                    values[1] = "8080";
+                }
+            } else {
+                values[1] = "8080";
+            }
+            remote = `${values[0]}:${values[1]}`
             break;
         }
     }
