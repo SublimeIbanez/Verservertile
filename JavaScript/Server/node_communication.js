@@ -1,8 +1,9 @@
 import { StatusCode, Header, Method, Parameter, Status } from "../common/protocol.js";
 import { ParseBody } from "../common/parse.js";
 import { NodeInfo } from "./node.js";
+import { Path } from "../common/utils.js";
 
-export const HandleNodeRegistration = (request, response, node) => {
+export const HandleNodeRegistration = (url, request, response, node) => {
     switch (request.method) {
         case Method.Post: {
             ParseBody(request).then((result) => {
@@ -54,8 +55,18 @@ export const HandleNodeRegistration = (request, response, node) => {
         }
 
         case Method.Delete: {
+            const uuid = url.pathname.replace(`${Path.Registration}/`, "");
 
-            console.log("bl0p");
+            node.NodeList = node.NodeList.filter((n) => n.Uuid !== uuid);
+            console.log("Node List:", node.NodeList);
+
+            response.writeHead(StatusCode.Ok, {
+                [Header.ContentType]: Header.ApplicationJson,
+            });
+            response.end(JSON.stringify({
+                [Parameter.Status]: Status.Success,
+                [Parameter.Message]: "Node Removed",
+            }));
             break;
         }
 

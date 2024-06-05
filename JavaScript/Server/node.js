@@ -128,63 +128,60 @@ export class Node {
     HandleConnection = (request, response) => {
         const url = new URL(request.url, `http://${request.headers.host}`);
 
-        switch (url.pathname) {
-            case Path.Registration:
-                HandleNodeRegistration(request, response, this);
-                break;
-
-            default: {
-                response.statusCode = StatusCode.NotFound;
-                response.setHeader(Header.ContentType, Header.TextPlain);
-                response.end("Not Found");
-            }
+        if (url.pathname.includes(Path.Registration)) {
+            HandleNodeRegistration(url, request, response, this);
+            return;
         }
+
+        response.statusCode = StatusCode.NotFound;
+        response.setHeader(Header.ContentType, Header.TextPlain);
+        response.end("Not Found");
     }
 
-    Shutdown = () => {
+    Shutdown = async () => {
         // De-register
-        const options = {
-            hostname: this.Leader.Host,
-            port: this.Leader.Port,
-            path: Path.Registration,
-            method: Method.Delete,
-            headers: {
-                [Header.ContentType]: Header.ApplicationJson,
-            },
-        };
-
-        const registerRequest = request(options, (registerResponse) => {
-            ParseBody(registerResponse).then((result) => {
-                result.match({
-                    Ok: body => {
-                        this.Leader.Uuid = body[Parameter.Uuid];
-                        console.log(body);
+        await (new Promise((resolve) => {
+            if (this.Type === Mode.ServerNode) {
+                const options = {
+                    hostname: this.Leader.Host,
+                    port: this.Leader.Port,
+                    path: `${Path.Registration}/${this.Info.Uuid}`,
+                    method: Method.Delete, // /api/something?id=somenumber
+                    headers: {
+                        [Header.ContentType]: Header.ApplicationJson,
                     },
-                    Err: error => {
-                        console.log(error);
-                    }
+                };
+
+                const deregRequest = request(options, (deregResponse) => {
+                    ParseBody(deregResponse).then((result) => {
+                        result.match({
+                            Ok: body => console.log(body),
+                            Err: error => console.log(error),
+                        });
+                        resolve();
+                    });
                 });
-            });
-        });
 
-        registerRequest.on(Parameter.Error, (e) => {
-            this.OutputBuffer.push(`Problem with request: ${e.message}`);
-        });
+                deregRequest.on(Parameter.Error, (e) => {
+                    this.OutputBuffer.push(`Problem with request: ${e.message}`);
+                    resolve();
+                });
 
-        const registrationData = JSON.stringify({
-            [Parameter.Uuid]: this.Info.Uuid,
-            [Parameter.Host]: this.Info.Host,
-            [Parameter.Port]: this.Info.Port,
-        });
+                deregRequest.end();
+            } else {
+                // Set up the next leader
+                resolve();
+            }
+        }));
 
-        registerRequest.write(registrationData);
-        registerRequest.end();
-
-        // Close Server
         if (this.Server) {
-            this.Server.close(() => {
-                this.OutputBuffer.push("Closing server");
-            });
+            await (new Promise((resolve) => {
+                // Close Server
+                this.Server.close(() => {
+                    this.OutputBuffer.push("Closing server");
+                    resolve();
+                });
+            }));
         }
 
         // Close the reader
@@ -202,6 +199,7 @@ export class Node {
         }
 
         console.log("Node shutdown");
+        process.exit(0);
     }
 }
 

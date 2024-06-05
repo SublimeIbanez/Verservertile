@@ -13,13 +13,21 @@ export const ParseBody = (request) => {
             try {
                 let value = JSON.parse(body);
                 return resolve(Result.Ok(value));
-            } catch {
-                return resolve(Result.Err("Could not parse data"));
+            } catch (error) {
+                return resolve(Result.Err(`Could not parse data: ${error.message}`));
             }
-        })
+        });
 
         request.on(Parameter.Error, (error) => {
             return resolve(Result.Err(error));
-        })
+        });
+
+        request.on('close', () => {
+            //console.log('Request connection closed');
+        });
+
+        request.on('aborted', () => {
+            //console.log('Request connection aborted');
+        });
     })
 };
