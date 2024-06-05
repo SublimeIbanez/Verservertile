@@ -1,6 +1,6 @@
 import { Path, Mode } from "../common/utils.js";
 import { StatusCode, Header, Method, Parameter } from "../common/protocol.js";
-import { createServer, request } from "node:http";
+import { createServer, IncomingMessage, OutgoingMessage, request, Server } from "node:http";
 import { HandleNodeRegistration } from "./node_communication.js";
 import { v4 as uuidv4 } from "uuid";
 import readline from "node:readline";
@@ -8,32 +8,72 @@ import { ParseBody } from "../common/parse.js";
 import { clearInterval } from "node:timers";
 
 export class NodeInfo {
+    /** 
+     * @param {string} uuid 
+     * @param {string} host 
+     * @param {number} port 
+     */
     constructor(uuid, host, port) {
+        /** @type {string} */
         this.Uuid = uuid;
+
+        /** @type {string} */
         this.Host = host;
-        this.Port = parseInt(port);
+
+        /** @type {number} */
+        this.Port = parseInt(port, 10);
     }
 }
 
 export class Node {
+    /**
+     * @param {string} localHost 
+     * @param {string} localPort 
+     * @param {string} remoteHost 
+     * @param {string} remotePort 
+     * @param {boolean} leader 
+     */
     constructor(localHost, localPort, remoteHost, remotePort, leader) {
+        /** @type {NodeInfo} */
         this.Info = new NodeInfo(uuidv4().replace(/-/g, ""), localHost, localPort);
+
+        /** @type {NodeInfo} */
         this.Leader = new NodeInfo(leader ? this.Uuid : "", remoteHost, remotePort);
+
+        /** @type {Mode} */
         this.Type = leader ? Mode.LeaderNode : Mode.ServerNode;
+
+        /** @type {string[]} */
         this.InputBuffer = [];
+
+        /** @type {readline.Interface} */
         this.ConsoleReader = null;
+
+        /** @type {NodeJS.Timeout} */
         this.InputTask = null;
+
+        /** @type {string[]} */
         this.OutputBuffer = [];
+
+        /** @type {NodeJS.Timeout} */
         this.OutputTask = null;
+
+        /** @type {NodeInfo[]} */
         this.NodeList = [];
+
+        /** @type {string[]} */
         this.Services = [];
+
+        /** @type {Server} */
         this.Server = null;
     }
 
+    /** @param {string} input */
     AddInput = (input) => {
         this.InputBuffer.push(input);
     }
 
+    /** @param {string} output */
     AddOutput = (output) => {
         this.OutputBuffer.push(output);
     }
@@ -62,7 +102,7 @@ export class Node {
                     }
                 }
             }
-        })
+        }, 100);
     }
 
     HandleOutput = async () => {
@@ -70,7 +110,7 @@ export class Node {
             while (this.OutputBuffer.length > 0) {
                 console.log(this.OutputBuffer.shift());
             }
-        }, 100)
+        }, 100);
     }
 
     Start = () => {
@@ -81,7 +121,7 @@ export class Node {
         this.HandleOutput();
 
         this.Server.listen(this.Info.Port, this.Info.Host, () => {
-            this.OutputBuffer.push(`Server running at http://${this.Info.Host}:${this.Info.Port}`);
+            this.AddOutput(`Server running at http://${this.Info.Host}:${this.Info.Port}`);
         });
 
         // Register with leader
@@ -97,21 +137,17 @@ export class Node {
             };
 
             const registerRequest = request(options, (registerResponse) => {
-                ParseBody(registerResponse).then((result) => {
-                    result.match({
-                        Ok: body => {
-                            this.Leader.Uuid = body[Parameter.Uuid];
-                            console.log(body);
-                        },
-                        Err: error => {
-                            console.log(error);
-                        }
-                    });
-                });
+                try {
+                    const body = ParseBody(registerResponse);
+                    this.Leader.Uuid = body[Parameter.Uuid];
+                    console.log(body);
+                } catch (error) {
+                    console.log(error);
+                }
             });
 
             registerRequest.on(Parameter.Error, (e) => {
-                this.OutputBuffer.push(`Problem with request: ${e.message}`);
+                this.AddOutput(`Problem with request: ${e.message}`);
             });
 
             const registrationData = JSON.stringify({
@@ -125,6 +161,10 @@ export class Node {
         }
     }
 
+    /**
+     * @param {IncomingMessage} request 
+     * @param {OutgoingMessage} response 
+     */
     HandleConnection = (request, response) => {
         const url = new URL(request.url, `http://${request.headers.host}`);
 
@@ -153,17 +193,17 @@ export class Node {
                 };
 
                 const deregRequest = request(options, (deregResponse) => {
-                    ParseBody(deregResponse).then((result) => {
-                        result.match({
-                            Ok: body => console.log(body),
-                            Err: error => console.log(error),
-                        });
+                    try {
+                        const body = ParseBody(deregResponse);
+                        console.log(body);
                         resolve();
-                    });
+                    } catch (error) {
+                        console.log(error);
+                    }
                 });
 
                 deregRequest.on(Parameter.Error, (e) => {
-                    this.OutputBuffer.push(`Problem with request: ${e.message}`);
+                    this.AddOutput(`Problem with request: ${e.message}`);
                     resolve();
                 });
 
@@ -178,7 +218,7 @@ export class Node {
             await (new Promise((resolve) => {
                 // Close Server
                 this.Server.close(() => {
-                    this.OutputBuffer.push("Closing server");
+                    this.AddOutput("Closing server");
                     resolve();
                 });
             }));
@@ -203,6 +243,10 @@ export class Node {
     }
 }
 
+/**
+ * @param {string} remote 
+ * @param {string} local 
+ */
 export const HandleServer = (remote, local) => {
     const [localHost, localPort] = local.split(":");
     let node;

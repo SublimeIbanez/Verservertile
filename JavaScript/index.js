@@ -2,37 +2,54 @@ import { argv } from "node:process";
 import { Mode } from "./common/utils.js";
 import { HandleServer } from "./Server/node.js";
 
-const Arguments = Object.freeze({
+/**
+ * Initialization argument types
+ * @type {number}
+ */
+const Argument = Object.freeze({
     ModeArg: 0,
     LocalArg: 1,
     RemoteArg: 2,
     None: 3,
 });
 
+/** @type {string} */
 let remote = "";
-let local = "localhost:8000";
-let mode = Mode.None;
-let currentMode = Arguments.None;
 
+/** @type {string} */
+let local = "localhost:8000";
+
+/** @type {Mode} */
+let mode = Mode.None;
+
+/** @type {Argument} */
+let currentMode = Argument.None;
+
+/**
+ * Matches the argument flag to its respective enum value
+ * @param {string} arg 
+ * @returns {Argument}
+ */
 const MatchArgs = (arg) => {
     switch (arg.toLowerCase()) {
         case "-m":
         case "--mode":
-            return Arguments.ModeArg;
+            return Argument.ModeArg;
         case "-l":
         case "--local":
-            return Arguments.LocalArg;
+            return Argument.LocalArg;
         case "-r":
         case "--remote":
-            return Arguments.RemoteArg;
+            return Argument.RemoteArg;
         default:
-            return Arguments.None;
+            return Argument.None;
     }
 };
 
+// Iterate through all passed arguments
 argv.slice(0).forEach(arg => {
     switch (currentMode) {
-        case Arguments.ModeArg: {
+        case Argument.ModeArg: {
             switch (arg.toLowerCase().trim()) {
                 case "client":
                     mode = Mode.Client;
@@ -44,7 +61,7 @@ argv.slice(0).forEach(arg => {
             break;
         }
 
-        case Arguments.LocalArg: {
+        case Argument.LocalArg: {
             // Parse and error check the argument
             let pos = arg.indexOf(":");
             let values = arg.split(":");
@@ -62,7 +79,7 @@ argv.slice(0).forEach(arg => {
             break;
         }
 
-        case Arguments.RemoteArg: {
+        case Argument.RemoteArg: {
             let pos = arg.indexOf(":");
             if (pos === -1) {
                 console.log("Must pass correct remote\n  Expected: hostname:port");
@@ -85,8 +102,6 @@ argv.slice(0).forEach(arg => {
     }
     currentMode = MatchArgs(arg)
 });
-
-console.log(remote, local);
 
 switch (mode) {
     case Mode.Client: {

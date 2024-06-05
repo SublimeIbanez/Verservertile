@@ -1,3 +1,7 @@
+/**
+ * HTTP Status Codes
+ * @type {number}
+ */
 export const StatusCode = {
     Continue: 100,
     SwitchProto: 101,
@@ -31,6 +35,10 @@ export const StatusCode = {
     GatewayTimeout: 504,
 };
 
+/**
+ * HTTP headers
+ * @type {string}
+ */
 export const Header = {
     Accept: "Accept",
     ApplicationJson: "application/json",
@@ -38,6 +46,10 @@ export const Header = {
     TextPlain: "text/plain",
 };
 
+/**
+ * HTTP Methods
+ * @type {string}
+ */
 export const Method = {
     Delete: "DELETE",
     Get: "GET",
@@ -47,7 +59,13 @@ export const Method = {
     Trace: "TRACE",
 };
 
+/**
+ * Request/Response parameters
+ * @type {string}
+ */
 export const Parameter = {
+    Aborted: "aborted",
+    Close: "close",
     Data: "data",
     End: "end",
     Error: "error",
@@ -58,6 +76,10 @@ export const Parameter = {
     Port: "port",
 }
 
+/**
+ * Request/Response status
+ * @type {string}
+ */
 export const Status = {
     Success: "success",
     Unauthorized: "unauthorized",

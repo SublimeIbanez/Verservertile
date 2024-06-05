@@ -1,33 +1,36 @@
-import { Result } from "./result.js";
 import { Parameter } from "./protocol.js";
 
-export const ParseBody = (request) => {
-    let body = "";
+/**
+ * @param {import("http").IncomingMessage | import("http").OutgoingMessage} message 
+ * @returns {Promise<object | Error>}
+ */
+export const ParseBody = (message) => {
+    return new Promise((resolve, reject) => {
+        let body = "";
 
-    return new Promise((resolve) => {
-        request.on(Parameter.Data, (chunk) => {
+        message.on(Parameter.Data, (chunk) => {
             body += chunk.toString();
         });
 
-        request.on(Parameter.End, () => {
+        message.on(Parameter.End, () => {
             try {
                 let value = JSON.parse(body);
-                return resolve(Result.Ok(value));
+                resolve(value);
             } catch (error) {
-                return resolve(Result.Err(`Could not parse data: ${error.message}`));
+                reject(error);
             }
         });
 
-        request.on(Parameter.Error, (error) => {
-            return resolve(Result.Err(error));
+        message.on(Parameter.Error, (error) => {
+            reject(error);
         });
 
-        request.on('close', () => {
+        message.on(Parameter.Close, () => {
             //console.log('Request connection closed');
         });
 
-        request.on('aborted', () => {
-            //console.log('Request connection aborted');
+        message.on(Parameter.Reject, () => {
+            reject(new Error("Request was aborted"));
         });
     })
 };

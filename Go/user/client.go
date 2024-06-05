@@ -1,14 +1,11 @@
 package user
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"go_server/server"
 	"go_server/utils"
 	"net"
-	"os"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -20,14 +17,22 @@ type State uint8
 const (
 	AwaitingServiceChoice State = 0
 	ServiceChosen         State = 1
+	InService             State = 2
 )
+
+type SelectedService struct {
+	Service server.Service
+	Address string
+}
 
 type Client struct {
 	uuid          string
 	localAddress  string
 	remoteAddress string
 	outputChannel chan string
+	inputChannel  chan string
 	services      map[server.Service]*[]string // service -> addresses
+	service       SelectedService
 	state         State
 	mtx           sync.RWMutex
 	cancel        context.CancelFunc
@@ -44,9 +49,10 @@ func HandleClient(local string, remote string) {
 		localAddress:  local,
 		remoteAddress: remote,
 		outputChannel: make(chan string, 100),
+		inputChannel:  make(chan string, 100),
+		services:      make(map[server.Service]*[]string),
 		cancel:        cancel,
 		context:       context,
-		services:      make(map[server.Service]*[]string),
 	}
 	go client.listen()
 
@@ -100,76 +106,6 @@ func (client *Client) listen() {
 			}
 			go client.handleConnection(connection)
 		}
-	}
-}
-
-func (client *Client) outputHandler() {
-	for out := range client.outputChannel {
-		select {
-		case <-client.context.Done():
-			return
-
-		default:
-			fmt.Println(out)
-		}
-	}
-
-}
-
-func (client *Client) inputHandler(wait *sync.WaitGroup) {
-	defer wait.Done()
-	scanner := bufio.NewScanner(os.Stdin)
-
-	for scanner.Scan() {
-		select {
-		case <-client.context.Done():
-			return
-
-		default:
-			text := strings.ToLower(scanner.Text())
-			if text == "/exit" {
-				client.context.Done()
-				return
-			}
-			switch client.state {
-			case AwaitingServiceChoice:
-				{
-					choice, err := strconv.Atoi(text)
-					if err != nil {
-						client.outputChannel <- "Invalid choice, you must make a selection [number]"
-						continue
-					}
-					if choice <= 0 || choice > len(client.services) {
-						client.outputChannel <- "Invalid choice, please make a valid selection"
-						continue
-					}
-					i := 1
-					for service := range client.services {
-						if choice != i {
-							continue
-						}
-						request, err := client.ServiceChoiceRequest(service)
-						if err != nil {
-							client.outputChannel <- "Could not generate service choice request: " + err.Error()
-						}
-
-						conn, err := net.Dial(string(utils.TCP), client.remoteAddress)
-						if err != nil {
-							client.outputChannel <- "Could not send service choice request: " + err.Error()
-						}
-						defer conn.Close()
-						conn.Write(request)
-						break
-					}
-					client.outputChannel <- "Awaiting response from the server..."
-				}
-
-			}
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		client.outputChannel <- "Error reading from the console: " + err.Error()
 	}
 }
 
