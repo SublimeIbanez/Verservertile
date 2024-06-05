@@ -10,7 +10,7 @@ const Arguments = Object.freeze({
 });
 
 let remote = "";
-let local = "localhost:8000";
+let local = "localhost:8080";
 let mode = Mode.None;
 let currentMode = Arguments.None;
 
@@ -48,12 +48,11 @@ argv.slice(0).forEach(arg => {
             // Parse and error check the argument
             let pos = arg.indexOf(":");
             let values = arg.split(":");
-            if (pos > 0 && values.length > 1) {
+            if (pos >= 0 && values.length > 1) {
                 try {
                     parseInt(values[1]);
                 } catch (error) {
                     console.log(`Could not parse port - defaulting to 8080: ${error}`);
-                } finally {
                     values[1] = "8080";
                 }
             } else {
@@ -75,7 +74,6 @@ argv.slice(0).forEach(arg => {
                     parseInt(values[1]);
                 } catch (error) {
                     console.log(`Could not parse port - defaulting to 8080: ${error}`);
-                } finally {
                     values[1] = "8080";
                 }
             } else {

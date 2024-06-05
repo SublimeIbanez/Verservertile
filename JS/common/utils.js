@@ -1,4 +1,3 @@
-
 export const StatusCode = {
     Continue: 100,
     SwitchProto: 101,
@@ -32,6 +31,12 @@ export const StatusCode = {
     GatewayTimeout: 504,
 };
 
+export const Status = {
+    Success: "success",
+    Unauthorized: "unauthorized",
+    Error: "error",
+}
+
 export const Method = {
     Delete: "DELETE",
     Get: "GET",
@@ -45,6 +50,11 @@ export const Parameter = {
     Data: "data",
     End: "end",
     Error: "error",
+    Uuid: "uuid",
+    Host: "host",
+    Status: "status",
+    Message: "message",
+    Port: "port",
 }
 
 export const Header = {
@@ -62,36 +72,5 @@ export const Mode = {
 };
 
 export const Path = {
-    Registration: "node/registration",
+    Registration: "/node/registration",
 }
-
-export class Result {
-    constructor(okVal = null, errVal = null) {
-        this.Ok = okVal;
-        this.Err = errVal;
-    }
-
-    Ok(value) {
-        return new Result(value, null);
-    }
-
-    Err(value) {
-        return new Result(null, value);
-    }
-
-    isOk() {
-        return this.Ok !== null;
-    }
-
-    isErr() {
-        return this.Err !== null;
-    }
-
-    match({ Ok, Err }) {
-        return isOk() ? Ok(this.Ok) : Err(this.Err);
-    }
-
-    unwrap() {
-        return this.Ok;
-    }
-};

@@ -1,25 +1,29 @@
 import { Parameter, Path, StatusCode, Header, Mode, Method } from "../common/utils.js";
 import { createServer, request } from "node:http";
-import { HandleNodeRegistration } from "./node_communicaiton.js";
+import { HandleNodeRegistration } from "./node_communication.js";
 import { v4 as uuidv4 } from "uuid";
 import readline from "node:readline";
+import { ParseBody } from "../common/parse.js";
 
-export class Leader {
-    constructor(host, port) {
-        this.LeaderHost = host;
-        this.LeaderPort = parseInt(port);
+export class NodeInfo {
+    constructor(uuid, host, port) {
+        this.Uuid = uuid;
+        this.Host = host;
+        this.Port = parseInt(port);
     }
 }
 
 export class Server {
     constructor(localHost, localPort, remoteHost, remotePort, leader) {
-        this.Uuid = uuidv4().replace("-", "");
+        this.Uuid = uuidv4().replace(/-/g, "");
         this.Port = parseInt(localPort);
         this.Host = localHost;
-        this.Leader = new Leader(remoteHost, remotePort);
-        this.Type = leader ? Mode.ServerNode : Mode.LeaderNode;
+        this.Leader = new NodeInfo(leader ? this.Uuid : "", remoteHost, remotePort);
+        this.Type = leader ? Mode.LeaderNode : Mode.ServerNode;
         this.InputBuffer = [];
         this.OutputBuffer = [];
+        this.NodeList = [];
+        this.Services = [];
     }
 
     AddInput = (input) => {
@@ -52,7 +56,7 @@ export class Server {
     }
 
     Start = () => {
-        const server = createServer((request, response) => HandleConnection(request, response));
+        const server = createServer((request, response) => this.HandleConnection(request, response));
 
         this.HandleInput();
         this.HandleOutput();
@@ -61,10 +65,11 @@ export class Server {
             console.log(`Server running at http://${this.Host}:${this.Port}`);
         });
 
+        // Register with leader
         if (this.Type === Mode.ServerNode) {
             const options = {
-                hostname: this.Leader.remoteHost,
-                port: this.Leader.remotePort,
+                hostname: this.Leader.Host,
+                port: this.Leader.Port,
                 path: Path.Registration,
                 method: Method.Post,
                 headers: {
@@ -73,14 +78,16 @@ export class Server {
             };
 
             const registerRequest = request(options, (registerResponse) => {
-                let data = "";
-
-                registerResponse.on(Parameter.Data, (chunk) => {
-                    data += chunk;
-                });
-
-                registerResponse.on(Parameter.End, () => {
-                    console.log(`Response from leader: ${data}`);
+                ParseBody(registerResponse).then((result) => {
+                    result.match({
+                        Ok: body => { 
+                            this.Leader.Uuid = body[Parameter.Uuid];
+                            console.log(body);
+                        },
+                        Err: error => { 
+                            console.log(error);
+                        }
+                    });
                 });
             });
 
@@ -89,10 +96,12 @@ export class Server {
             });
 
             const registrationData = JSON.stringify({
-                Uuid: this.Uuid,
-                Host: this.Host,
-                Port: this.Port,
+                [Parameter.Uuid]: this.Uuid,
+                [Parameter.Host]: this.Host,
+                [Parameter.Port]: this.Port,
             });
+
+            console.log(registrationData);
 
             registerRequest.write(registrationData);
             registerRequest.end();
@@ -100,16 +109,17 @@ export class Server {
     }
 
     HandleConnection = (request, response) => {
-        const url = new URL(request.url, `http://${this.Host}:${this.Port}`);
+        const url = new URL(request.url, `http://${request.headers.host}`);
 
         switch (url.pathname) {
             case Path.Registration:
-                HandleNodeRegistration(request, response);
+                HandleNodeRegistration(request, response, this);
+                break;
 
             default: {
-                response.statusCode = StatusCode.BadRequest;
+                response.statusCode = StatusCode.NotFound;
                 response.setHeader(Header.ContentType, Header.TextPlain);
-                response.end("Invalid request");
+                response.end("Not Found");
             }
         }
     }
@@ -118,7 +128,7 @@ export class Server {
 export const HandleServer = (remote, local) => {
     const [localHost, localPort] = local.split(":");
     let server;
-    if (remote === local) {
+    if (remote.length === 0) {
         server = new Server(localHost, localPort, localHost, localPort, true);
     } else {
         const [remoteHost, remotePort] = remote.split(":");
