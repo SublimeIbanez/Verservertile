@@ -59,7 +59,7 @@ export const HandleNodeRegistration = async (url, request, response, node) => {
         }
 
         case Method.Delete: {
-            const uuid = url.pathname.replace(`${Path.Registration}/`, "");
+            const uuid = url.pathname.replace(`${Path.NodeRegistration}/`, "");
 
             node.NodeList = node.NodeList.filter((n) => n.Uuid !== uuid);
             console.log("Node List:", node.NodeList);

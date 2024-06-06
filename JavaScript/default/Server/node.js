@@ -129,12 +129,13 @@ export class Node {
             const options = {
                 hostname: this.Leader.Host,
                 port: this.Leader.Port,
-                path: Path.Registration,
+                path: Path.NodeRegistration,
                 method: Method.Post,
                 headers: {
                     [Header.ContentType]: Header.ApplicationJson,
                 },
             };
+            console.log(options);
 
             const registerRequest = request(options, (registerResponse) => {
                 try {
@@ -168,7 +169,7 @@ export class Node {
     HandleConnection = (request, response) => {
         const url = new URL(request.url, `http://${request.headers.host}`);
 
-        if (url.pathname.includes(Path.Registration)) {
+        if (url.pathname.includes(Path.NodeRegistration)) {
             HandleNodeRegistration(url, request, response, this);
             return;
         }
@@ -185,8 +186,8 @@ export class Node {
                 const options = {
                     hostname: this.Leader.Host,
                     port: this.Leader.Port,
-                    path: `${Path.Registration}/${this.Info.Uuid}`,
-                    method: Method.Delete, // /api/something?id=somenumber
+                    path: `${Path.NodeRegistration}/${this.Info.Uuid}`,
+                    method: Method.Delete, 
                     headers: {
                         [Header.ContentType]: Header.ApplicationJson,
                     },

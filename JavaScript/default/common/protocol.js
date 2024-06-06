@@ -2,7 +2,7 @@
  * HTTP Status Codes
  * @type {number}
  */
-export const StatusCode = {
+export const StatusCode = Object.freeze({
     Continue: 100,
     SwitchProto: 101,
     Processing: 102,
@@ -33,37 +33,37 @@ export const StatusCode = {
     BadGateway: 502,
     ServiceUnavailable: 503,
     GatewayTimeout: 504,
-};
+});
 
 /**
  * HTTP headers
  * @type {string}
  */
-export const Header = {
+export const Header = Object.freeze({
     Accept: "Accept",
     ApplicationJson: "application/json",
     ContentType: "Content-Type",
     TextPlain: "text/plain",
-};
+});
 
 /**
  * HTTP Methods
  * @type {string}
  */
-export const Method = {
+export const Method = Object.freeze({
     Delete: "DELETE",
     Get: "GET",
     Head: "HEAD",
     Post: "POST",
     Put: "PUT",
     Trace: "TRACE",
-};
+});
 
 /**
  * Request/Response parameters
  * @type {string}
  */
-export const Parameter = {
+export const Parameter = Object.freeze({
     Aborted: "aborted",
     Close: "close",
     Data: "data",
@@ -74,14 +74,14 @@ export const Parameter = {
     Status: "status",
     Message: "message",
     Port: "port",
-}
+});
 
 /**
  * Request/Response status
  * @type {string}
  */
-export const Status = {
+export const Status = Object.freeze({
     Success: "success",
     Unauthorized: "unauthorized",
     Error: "error",
-}
+});
