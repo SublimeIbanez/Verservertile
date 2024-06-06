@@ -14,6 +14,20 @@ export class NodeInfo {
      * @param {number} port 
      */
     constructor(uuid, host, port) {
+        let error = [];
+        if (typeof(uuid) !== "string") {
+            error.push("uuid must be a string.");
+        }
+        if (typeof(host) !== "string") {
+            error.push("host must be a string.");
+        }
+        if (typeof(port) !== "number") {
+            error.push("port must be a number.");
+        }
+        if (error.length !== 0) {
+            let e = error.join(" ");
+            throw new TypeError(e);
+        }
         /** @type {string} */
         this.Uuid = uuid;
 
@@ -22,6 +36,9 @@ export class NodeInfo {
 
         /** @type {number} */
         this.Port = parseInt(port, 10);
+        if (this.Port < 2_000 || this.Port > 40_000) {
+            throw new Error("expected port range between 2_000 and 40_000");
+        }
     }
 }
 
