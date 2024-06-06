@@ -1,5 +1,5 @@
-import { Path, Mode } from "../common/utils.js";
-import { StatusCode, Header, Method, Parameter } from "../common/protocol.js";
+import { Assert, Path, Mode, Type } from "../common/utils.js";
+import { StatusCode, Header, Method, Parameter, Status } from "../common/protocol.js";
 import { createServer, IncomingMessage, OutgoingMessage, request, Server } from "node:http";
 import { HandleNodeRegistration } from "./node_communication.js";
 import { v4 as uuidv4 } from "uuid";
@@ -14,20 +14,9 @@ export class NodeInfo {
      * @param {number} port 
      */
     constructor(uuid, host, port) {
-        let error = [];
-        if (typeof(uuid) !== "string") {
-            error.push("uuid must be a string.");
-        }
-        if (typeof(host) !== "string") {
-            error.push("host must be a string.");
-        }
-        if (typeof(port) !== "number") {
-            error.push("port must be a number.");
-        }
-        if (error.length !== 0) {
-            let e = error.join(" ");
-            throw new TypeError(e);
-        }
+        Assert(typeof (host) === Type.String, "host must be a string.");
+        Assert(typeof (port) === Type.Number || typeof (port) === Type.String, "port must be a number or a string");
+
         /** @type {string} */
         this.Uuid = uuid;
 
@@ -43,6 +32,11 @@ export class NodeInfo {
 }
 
 export class Node {
+    /** 
+     * Interval to manage input/output parsing
+     * @type {number} */
+    #updateInterval = 100;
+
     /**
      * @param {string} localHost 
      * @param {string} localPort 
@@ -55,7 +49,7 @@ export class Node {
         this.Info = new NodeInfo(uuidv4().replace(/-/g, ""), localHost, localPort);
 
         /** @type {NodeInfo} */
-        this.Leader = new NodeInfo(leader ? this.Uuid : "", remoteHost, remotePort);
+        this.Leader = new NodeInfo(leader ? this.Info.Uuid : "", remoteHost, remotePort);
 
         /** @type {Mode} */
         this.Type = leader ? Mode.LeaderNode : Mode.ServerNode;
@@ -103,7 +97,6 @@ export class Node {
         });
 
         this.ConsoleReader.on("line", (line) => {
-            console.log(`test: ${line}`);
             this.InputBuffer.push(line);
         })
     }
@@ -117,9 +110,12 @@ export class Node {
                         this.Shutdown();
                         break;
                     }
+                    case "leader": {
+                        this.AddOutput(this.Leader);
+                    }
                 }
             }
-        }, 100);
+        }, this.#updateInterval);
     }
 
     HandleOutput = async () => {
@@ -127,7 +123,7 @@ export class Node {
             while (this.OutputBuffer.length > 0) {
                 console.log(this.OutputBuffer.shift());
             }
-        }, 100);
+        }, this.#updateInterval);
     }
 
     Start = () => {
@@ -154,18 +150,29 @@ export class Node {
             };
             console.log(options);
 
-            const registerRequest = request(options, (registerResponse) => {
+            const registerRequest = request(options, async (registerResponse) => {
                 try {
-                    const body = ParseBody(registerResponse);
-                    this.Leader.Uuid = body[Parameter.Uuid];
-                    console.log(body);
+                    const body = await ParseBody(registerResponse);
+                    if (body[Parameter.Status] !== Status.Success) {
+                        console.error("Unable to connect to leader");
+                        this.Shutdown();
+                    }
+                    
+                    if (body[Parameter.Data][Parameter.Uuid] === undefined) {
+                        console.error("Invalid response from Leader:", body);
+                        this.Shutdown();
+                    }
+                    this.Leader.Uuid = body[Parameter.Data][Parameter.Uuid];
+                    this.AddOutput(`ATTENTION: Connected to ${this.Leader.Uuid}@${this.Leader.Host}:${this.Leader.Port}`);
                 } catch (error) {
-                    console.log(error);
+                    console.error(`Unable to connect to leader: ${error}`);
+                    this.Shutdown();
                 }
             });
 
             registerRequest.on(Parameter.Error, (e) => {
-                this.AddOutput(`Problem with request: ${e.message}`);
+                this.AddOutput(`Could not connect to leader: ${e.message}\n-- Shutting down`);
+                this.Shutdown();
             });
 
             const registrationData = JSON.stringify({
@@ -204,7 +211,7 @@ export class Node {
                     hostname: this.Leader.Host,
                     port: this.Leader.Port,
                     path: `${Path.NodeRegistration}/${this.Info.Uuid}`,
-                    method: Method.Delete, 
+                    method: Method.Delete,
                     headers: {
                         [Header.ContentType]: Header.ApplicationJson,
                     },
@@ -214,6 +221,7 @@ export class Node {
                     try {
                         const body = ParseBody(deregResponse);
                         console.log(body);
+                        console.log(Parameter.Status);
                         resolve();
                     } catch (error) {
                         console.log(error);
@@ -257,7 +265,6 @@ export class Node {
         }
 
         console.log("Node shutdown");
-        process.exit(0);
     }
 }
 

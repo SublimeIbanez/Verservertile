@@ -1,42 +1,56 @@
 import request from "supertest";
 import { Node } from "../Server/node";
+import { Mode } from "../common/utils";
 
 describe("Node", () => {
-  let node;
+    let node;
 
-  beforeEach(() => {
-    node = new Node("localhost", "8001", "localhost", "8000", true);
-  });
+    beforeEach(() => {
+        node = new Node("localhost", "8000", "localhost", "8000", true);
+    });
 
-  it("should create a Node object with correct properties", () => {
-    expect(node.Info).toHaveProperty("Uuid");
-    expect(node.Info.Host).toBe("localhost");
-    expect(node.Info.Port).toBe(8001);
-    expect(node.Leader.Host).toBe("localhost");
-    expect(node.Leader.Port).toBe(8000);
-    expect(node.Type).toBe("LeaderNode");
-    expect(node.InputBuffer).toEqual([]);
-    expect(node.OutputBuffer).toEqual([]);
-    expect(node.NodeList).toEqual([]);
-    expect(node.Services).toEqual([]);
-  });
+    it("should create a Node object with correct properties", async () => {
+        expect(node.Info).toHaveProperty("Uuid");
+        expect(node.Info.Host).toBe("localhost");
+        expect(node.Info.Port).toBe(8000);
+        expect(node.Leader.Host).toBe("localhost");
+        expect(node.Leader.Port).toBe(8000);
+        expect(node.Type).toBe(Mode.LeaderNode);
+        expect(node.InputBuffer).toEqual([]);
+        expect(node.OutputBuffer).toEqual([]);
+        expect(node.NodeList).toEqual([]);
+        expect(node.Services).toEqual([]);
 
-  it("should handle input correctly", () => {
-    node.AddInput("test input");
-    expect(node.InputBuffer).toContain("test input");
-  });
+        await node.Shutdown();
+    });
 
-  it("should handle output correctly", () => {
-    node.AddOutput("test output");
-    expect(node.OutputBuffer).toContain("test output");
-  });
+    it("Start Leader and connect follower, verify follower exists in NodeList, then disconnect the follower and verify follower removed", async () => {
+        node.Start();
+        const followerNode = new Node("localhost", "8001", "localhost", "8000", false);
+        followerNode.Start();
 
-  it("should start the server and respond to requests", async () => {
-    node.Start();
-    const response = await request(node.Server).get("/node/registration");
-    expect(response.status).toBe(404); // Adjust based on your expected behavior
+        // Wait 3 seconds to give the nodes time to communicate, unsure of how to do this better
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Close the server after the test
-    node.Server.close();
-  });
+        // Verify the node exists in the Leader's NodeList
+        expect(node.NodeList.length).toBe(1);
+        // Verify the Leader's uuid has been sent back and added appropriately
+        expect(followerNode.Leader.Uuid).toBe(node.Info.Uuid);
+
+        followerNode.AddInput("exit");
+
+        // Wait 3 seconds to give the nodes time to communicate, unsure of how to do this better
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        expect(node.NodeList.length).toBe(0);
+
+        await node.Shutdown();
+    });
+
+    it("should start the server and respond to requests", async () => {
+        node.Start();
+        const response = await request(node.Server).get("/node/registration");
+        expect(response.status).toBe(404);
+
+        await node.Shutdown();
+    });
 });

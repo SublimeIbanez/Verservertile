@@ -10,7 +10,6 @@ export const ParseBody = (message) => {
 
         message.on(Parameter.Data, (chunk) => {
             body += chunk.toString();
-            console.log(body);
         });
 
         message.on(Parameter.End, () => {

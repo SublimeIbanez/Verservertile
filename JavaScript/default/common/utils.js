@@ -10,6 +10,22 @@ export const Mode = Object.freeze({
 });
 
 /**
+ * @param {boolean} value 
+ * @param {string} message 
+ */
+export const Assert = (value, message) => {
+    if (!value) {
+        console.error(message);
+    }
+}
+
+export const Type = Object.freeze({
+    String: "string",
+    Number: "number",
+    Boolean: "boolean",
+});
+
+/**
  * REST API paths
  * @type {Object<string, string>}
  */
