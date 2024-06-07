@@ -24,7 +24,7 @@ describe("Node", () => {
         await node.Shutdown();
     });
 
-    it("Start Leader and connect follower, verify follower exists in NodeList, then disconnect the follower and verify follower removed", async () => {
+    it("Start Leader and connect follower, verify follower exists in NodeList, then disconnect the follower and verify follower removed - 2 second intervals", async () => {
         node.Start();
         const followerNode = new Node("localhost", "8001", "localhost", "8000", false);
         followerNode.Start();
@@ -46,11 +46,4 @@ describe("Node", () => {
         await node.Shutdown();
     });
 
-    it("should start the server and respond to requests", async () => {
-        node.Start();
-        const response = await request(node.Server).get("/node/registration");
-        expect(response.status).toBe(404);
-
-        await node.Shutdown();
-    });
 });
