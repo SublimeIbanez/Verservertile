@@ -148,7 +148,6 @@ export class Node {
                     [Header.ContentType]: Header.ApplicationJson,
                 },
             };
-            console.log(options);
 
             const registerRequest = request(options, async (registerResponse) => {
                 try {

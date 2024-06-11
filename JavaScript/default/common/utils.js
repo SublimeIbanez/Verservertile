@@ -35,7 +35,7 @@ export const Path = Object.freeze({
     NodeRegistration: "/node/registration",
 
     // ################## Authentication ##################
-    /** User log-  in:Get | out:Trace | registration:PUT | edit:POST */
+    /** User log-  in:Get | registration:PUT | edit:POST */
     AuthAccess: "/auth/access",
 
     // ################## DB Management ##################
