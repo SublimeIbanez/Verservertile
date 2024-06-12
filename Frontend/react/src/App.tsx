@@ -1,16 +1,13 @@
 import './App.css'
 import { Path } from './common/utils'
+import { User } from './components/user'
 
 function App() {
 
     return (
         <>
             <div>
-                <div className="Header"
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between"
-                    }}>
+                <div className="Header">
                     <div className="Header_Left">
                         This is a logo
                     </div>
@@ -18,7 +15,7 @@ function App() {
                         IDK have a directory or something here
                     </div>
                     <div className="Header_Right">
-                        This gonna be a bop
+                        <User />
                     </div>
                 </div>
                 <ul style={{
