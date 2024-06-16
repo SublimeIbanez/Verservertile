@@ -40,9 +40,9 @@ const UserInfoPopup = ({ setPopUp, setUserInfo }: UserInfoProps) => {
     const [usernameError, setUsernameError] = useState(false);
     const [passwordError, setPasswordError] = useState(false);
 
-    console.log("kek?");
+    const handleLogin = (e: React.FormEvent) => {
+        e.preventDefault();
 
-    const handleLogin = () => {
         let hasError = false;
         if (username.length === 0) {
             setUsernameError(true);
@@ -56,11 +56,11 @@ const UserInfoPopup = ({ setPopUp, setUserInfo }: UserInfoProps) => {
         } else {
             setPasswordError(false);
         }
-        if (hasError) {
-            return;
+
+        if (!hasError) {
+            LogIn({ username, password, usernameError, passwordError }, { setPopUp, setUserInfo });
+            setPopUp(false);
         }
-        LogIn(setUserInfo);
-        setPopUp(false);
     };
 
     return (
@@ -68,12 +68,9 @@ const UserInfoPopup = ({ setPopUp, setUserInfo }: UserInfoProps) => {
             <div className="UserLoginPopup_Inner">
                 <h2>Login</h2>
                 {
-                    usernameError ? <p>Bruh... username can't be blank yo</p> : <></>
+                    usernameError || passwordError ? <p className="InvalidCredentials">Invalid Credentials</p> : <></>
                 }
-                {
-                    passwordError ? <p>Bruh... password can't be blank yo</p> : <></>
-                }
-                <form onSubmit={() => handleLogin()}>
+                <form onSubmit={e => handleLogin(e)}>
                     <label>
                         Username:
                         <input type="text" value={username} onChange={e => setUserName(e.target.value)} />
@@ -92,10 +89,18 @@ const UserInfoPopup = ({ setPopUp, setUserInfo }: UserInfoProps) => {
     )
 }
 
-const LogIn = (setUserInfo: React.Dispatch<React.SetStateAction<string>>) => {
-    console.log("You clicked the login kekekekekekekek");
+type LoginProps = {
+    username: string;
+    password: string;
+    usernameError: boolean;
+    passwordError: boolean;
+}
 
-    setUserInfo("User");
+const LogIn = ({ username, password, usernameError, passwordError }: LoginProps, { setPopUp, setUserInfo }: UserInfoProps) => {
+    console.log(username, password);
+
+    setUserInfo(username);
+    setPopUp(false);
 };
 
 const LogOut = (setUserInfo: React.Dispatch<React.SetStateAction<string>>) => {
