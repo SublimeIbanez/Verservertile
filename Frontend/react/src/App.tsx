@@ -1,6 +1,5 @@
 import './App.css'
-import { Path } from './common/utils'
-import { User } from './components/user'
+import { UserCard } from './components/user'
 
 function App() {
 
@@ -15,7 +14,7 @@ function App() {
                         IDK have a directory or something here
                     </div>
                     <div className="Header_Right">
-                        <User />
+                        <UserCard />
                     </div>
                 </div>
                 <ul style={{

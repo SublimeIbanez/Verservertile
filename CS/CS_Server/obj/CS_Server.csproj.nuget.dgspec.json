@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\jshbe\\Documents\\.Code\\Verservertile\\CS\\CS_Server\\CS_Server.csproj": {}
+    "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\CS_Server\\CS_Server.csproj": {}
   },
   "projects": {
-    "C:\\Users\\jshbe\\Documents\\.Code\\Verservertile\\CS\\CS_Server\\CS_Server.csproj": {
+    "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\CS_Server\\CS_Server.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\jshbe\\Documents\\.Code\\Verservertile\\CS\\CS_Server\\CS_Server.csproj",
+        "projectUniqueName": "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\CS_Server\\CS_Server.csproj",
         "projectName": "CS_Server",
-        "projectPath": "C:\\Users\\jshbe\\Documents\\.Code\\Verservertile\\CS\\CS_Server\\CS_Server.csproj",
-        "packagesPath": "C:\\Users\\jshbe\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\jshbe\\Documents\\.Code\\Verservertile\\CS\\CS_Server\\obj\\",
+        "projectPath": "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\CS_Server\\CS_Server.csproj",
+        "packagesPath": "C:\\Users\\Kokurio\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\CS_Server\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+          "E:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\jshbe\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Kokurio\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],

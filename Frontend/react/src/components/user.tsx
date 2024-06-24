@@ -1,6 +1,7 @@
 import { useState } from "react";
+import "./user.css";
 
-export const User = () => {
+export const UserCard = () => {
     const [userInfo, setUserInfo] = useState("");
     const [popup, setPopUp] = useState(false);
 
@@ -66,24 +67,23 @@ const UserInfoPopup = ({ setPopUp, setUserInfo }: UserInfoProps) => {
     return (
         <div className="UserLoginPopup">
             <div className="UserLoginPopup_Inner">
-                <h2>Login</h2>
                 {
                     usernameError || passwordError ? <p className="InvalidCredentials">Invalid Credentials</p> : <></>
                 }
+                <div className="UserLoginPopupLabel">
+                    <div></div>
+                    <h2 className="UserLoginLoginLabel">Login</h2>
+                    <button className="UserLoginPopupExit" onClick={() => setPopUp(false)}>X</button>
+                </div>
                 <form onSubmit={e => handleLogin(e)}>
-                    <label>
-                        Username:
-                        <input type="text" value={username} onChange={e => setUserName(e.target.value)} />
-                    </label>
-                    <br></br>
-                    <label>
-                        Password:
-                        <input type="text" value={password} onChange={e => setPassword(e.target.value)} />
-                    </label>
-                    <br></br>
+                    <div className="InputFields">
+                        <div className="UsernameLabel">Username:</div>
+                        <input className="UsernameInput" type="text" value={username} onChange={e => setUserName(e.target.value)} />
+                        <div className="PasswordLabel">Password:</div>
+                        <input className="PasswordInput" type="text" value={password} onChange={e => setPassword(e.target.value)} />
+                    </div>
                     <button type="submit">Login</button>
                 </form>
-                <button onClick={() => setPopUp(false)}>Close</button>
             </div>
         </div>
     )
