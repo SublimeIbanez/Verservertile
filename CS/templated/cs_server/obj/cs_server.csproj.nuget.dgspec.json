@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\jshbe\\Documents\\.Code\\Verservertile\\CS\\templated\\cs_server\\cs_server.csproj": {}
+    "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\templated\\cs_server\\cs_server.csproj": {}
   },
   "projects": {
-    "C:\\Users\\jshbe\\Documents\\.Code\\Verservertile\\CS\\templated\\cs_server\\cs_server.csproj": {
+    "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\templated\\cs_server\\cs_server.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\jshbe\\Documents\\.Code\\Verservertile\\CS\\templated\\cs_server\\cs_server.csproj",
+        "projectUniqueName": "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\templated\\cs_server\\cs_server.csproj",
         "projectName": "cs_server",
-        "projectPath": "C:\\Users\\jshbe\\Documents\\.Code\\Verservertile\\CS\\templated\\cs_server\\cs_server.csproj",
-        "packagesPath": "C:\\Users\\jshbe\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\jshbe\\Documents\\.Code\\Verservertile\\CS\\templated\\cs_server\\obj\\",
+        "projectPath": "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\templated\\cs_server\\cs_server.csproj",
+        "packagesPath": "C:\\Users\\Kokurio\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Kokurio\\Desktop\\Code\\Verservertile\\CS\\templated\\cs_server\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+          "E:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\jshbe\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Kokurio\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -44,6 +44,12 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
+          "dependencies": {
+            "Swashbuckle.AspNetCore.SwaggerGen": {
+              "target": "Package",
+              "version": "[6.6.2, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",

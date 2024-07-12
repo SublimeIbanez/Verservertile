@@ -1,25 +1,25 @@
-var builder = WebApplication.CreateBuilder(args);
+using cs_server.Utils;
 
-// Add services to the container.
-builder.Services.AddRazorPages();
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(Policy.AllowSpecificOrigin,
+        builder => builder.WithOrigins(HOST.Get)
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+});
 
-var app = builder.Build();
+WebApplication webApp = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+if (webApp.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    webApp.UseSwagger();
 }
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
+webApp.UseHttpsRedirection();
+webApp.UseStaticFiles();
 
-app.UseRouting();
+webApp.UseRouting();
 
-app.UseAuthorization();
-
-app.MapRazorPages();
-
-app.Run();
+webApp.Run();
