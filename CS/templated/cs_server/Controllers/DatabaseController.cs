@@ -1,3 +1,4 @@
+using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 
 namespace cs_server.Controllers;
@@ -7,14 +8,14 @@ namespace cs_server.Controllers;
 public class DatabaseItemController() : ControllerBase
 {
     [HttpGet("{item_id}")]
-    [Produces(Utils.Header.ApplicationJson)]
+    [Produces(MediaTypeNames.Application.Json)]
     public IEnumerable<string> Get(string item_id)
     {
         return [""];
     }
 
     [HttpPost]
-    [Produces(Utils.Header.ApplicationJson)]
+    [Produces(MediaTypeNames.Application.Json)]
     public string Post()
     {
         return "";
