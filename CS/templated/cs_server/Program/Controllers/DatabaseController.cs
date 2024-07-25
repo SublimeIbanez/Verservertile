@@ -1,7 +1,7 @@
 using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 
-namespace cs_server.Controllers;
+namespace cs_server.Program.Controllers;
 
 [Route(Utils.Route.DatabaseItem)]
 [ApiController]

@@ -1,4 +1,4 @@
-namespace cs_server.Utils;
+namespace cs_server.Program.Utils;
 
 /// <summary>
 /// Class-based source of truth for host address

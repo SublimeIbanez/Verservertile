@@ -1,4 +1,4 @@
-namespace cs_server.Models.Server;
+namespace cs_server.Program.Models.Server;
 
 public class Node(ServerInfo nodeInfo, ServerInfo leaderInfo)
 {

@@ -1,4 +1,4 @@
-namespace cs_server.Utils;
+namespace cs_server.Program.Utils;
 
 /// <summary>
 /// List of all routes supported by the back end

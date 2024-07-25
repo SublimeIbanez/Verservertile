@@ -1,8 +1,8 @@
 using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
-using cs_server.Models.Server;
+using cs_server.Program.Models.Server;
 
-namespace cs_server.Controllers;
+namespace cs_server.Program.Controllers;
 
 [Route(Utils.Route.NodeRegistration)]
 [ApiController]

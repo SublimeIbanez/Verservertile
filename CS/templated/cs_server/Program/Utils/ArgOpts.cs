@@ -1,4 +1,4 @@
-namespace cs_server.Utils;
+namespace cs_server.Program.Utils;
 using CommandLine;
 
 public class Options

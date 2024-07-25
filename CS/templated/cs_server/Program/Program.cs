@@ -1,11 +1,11 @@
 using CommandLine;
-using cs_server.Models.Server;
+using cs_server.Program.Models.Server;
 
 var (localHost, remoteHost) = ("localhost", "localhost");
 var (localPort, remotePort) = (8000, 8000);
 
-Parser.Default.ParseArguments<cs_server.Utils.Options>(args)
-    .WithParsed<cs_server.Utils.Options>(opts =>
+Parser.Default.ParseArguments<cs_server.Program.Utils.Options>(args)
+    .WithParsed<cs_server.Program.Utils.Options>(opts =>
     {
         if (string.IsNullOrEmpty(opts.Local) && string.IsNullOrEmpty(opts.Remote))
         {
@@ -74,7 +74,7 @@ Parser.Default.ParseArguments<cs_server.Utils.Options>(args)
             }
         }
     })
-    .WithNotParsed<cs_server.Utils.Options>(errs =>
+    .WithNotParsed<cs_server.Program.Utils.Options>(errs =>
     {
         Console.WriteLine(errs);
     });
