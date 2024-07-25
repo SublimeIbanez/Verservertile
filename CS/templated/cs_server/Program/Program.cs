@@ -5,7 +5,7 @@ var (localHost, remoteHost) = ("localhost", "localhost");
 var (localPort, remotePort) = (8000, 8000);
 
 Parser.Default.ParseArguments<cs_server.Program.Utils.Options>(args)
-    .WithParsed<cs_server.Program.Utils.Options>(opts =>
+    .WithParsed(opts =>
     {
         if (string.IsNullOrEmpty(opts.Local) && string.IsNullOrEmpty(opts.Remote))
         {
@@ -21,25 +21,18 @@ Parser.Default.ParseArguments<cs_server.Program.Utils.Options>(args)
             switch (localSeparator)
             {
                 case -1:
-                    {
-                        localHost = string.IsNullOrEmpty(localComponents[0]) ?
-                            localHost : localComponents[0];
-                        localPort = int.TryParse(localComponents[0], out int port) ?
-                            port : localPort;
-                        break;
-                    }
+                    localHost = string.IsNullOrEmpty(localComponents[0]) ?
+                        localHost : localComponents[0];
+                    localPort = int.TryParse(localComponents[0], out int port1) ?
+                        port1 : localPort;
+                    break;
                 case 0:
-                    {
-                        localPort = int.TryParse(localComponents[1], out int port) ? port
-                            : localPort;
-                        break;
-
-                    }
+                    localPort = int.TryParse(localComponents[1], out int port2) ? port2
+                        : localPort;
+                    break;
                 default:
-                    {
-                        localHost = localComponents[0];
-                        break;
-                    }
+                    localHost = localComponents[0];
+                    break;
             }
         }
 
@@ -74,10 +67,7 @@ Parser.Default.ParseArguments<cs_server.Program.Utils.Options>(args)
             }
         }
     })
-    .WithNotParsed<cs_server.Program.Utils.Options>(errs =>
-    {
-        Console.WriteLine(errs);
-    });
+    .WithNotParsed(Console.WriteLine);
 
 Node node = new(new ServerInfo(localHost, localPort), new ServerInfo(remoteHost, remotePort));
 node.Init();
